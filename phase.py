@@ -12,7 +12,7 @@
 '''
 
 # ------------------------------ file details ------------------------------ #
-#
+# 提取CSI相位信息
 # ------------------------------ file details ------------------------------ #
 from matplotlib.pyplot import subplot
 import numpy as np
@@ -212,19 +212,27 @@ if __name__ == '__main__':
     # 不用科学计数法显示
     np.set_printoptions(suppress=True)
     #! 手势O，位置1
-    csi_O = np.empty((50,6))
-    for i in range(1):
-        # 样本路径
-        filepath = 'classroom_data_unit/DX/O/gresture_O_location_1_' + str(i) +'.npy'
-        # 读取样本
-        scale_csi = read_sample(filepath)
-        # 低通滤波
-        csi_lowpass = butterworth_lowpass(scale_csi, 7, 0.01)
-        # PCA
-        csi_pca_9 = PCA_9(csi_abs=csi_lowpass, n_components=1, whiten=False)
-        # 画幅度图
-        #plt_9_amplitude(csi_pca_9,range(1))
-    print(datetime.datetime.now())
+    #? 样本路径
+    filepath = 'classroom_data_unit/DX/O/gresture_O_location_1_2.npy'
+    #? 读取样本
+    scale_csi = read_sample(filepath)
+    #? 获取幅度
+    amplitude_csi = abs(scale_csi[:,:,0,0])
+    #plt.plot(amplitude_csi)
+    #? 获取相位角
+    angle_csi = np.angle(scale_csi[:,:,0,0])
+    #plt.plot(angle_csi[:300,1])
+    #? 相位解卷绕
+    angle_csi = np.unwrap(angle_csi)
+    #plt.plot(angle_csi[:300,1])
+    #? 线性变换
+    # todo 不知道为啥要这样 结果也不是很好看 不知道是不是对的
+    k = [-28,-26,-24,-22,-20,-18,-16,-14,-12,-10,-8,-6,-4,-2,-1,1,3,5,7,9,11,13,15,17,19,21,23,25,27,28]
+    Transph_csi = np.empty_like(angle_csi)
+    for i in range(30):
+        Transph_csi[:,i]= angle_csi[:,i] - (angle_csi[:,29]-angle_csi[:,0])/56*k[i]-1/30*np.sum(angle_csi[:,i])
+    plt.plot(Transph_csi[:300,1])
+    plt.show()
     #* 记录程序运行时间，结束时间
     endtime = datetime.datetime.now()
     print("程序运行时间：", endtime - starttime)
