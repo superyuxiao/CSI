@@ -24,6 +24,8 @@ from sklearn import model_selection
 from sklearn.model_selection import train_test_split
 from sklearn.decomposition import PCA
 from sklearn import svm
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.impute import KNNImputer
 from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.ensemble import GradientBoostingClassifier
@@ -241,7 +243,7 @@ if __name__ == '__main__':
     csi_O = np.empty((50,6))
     for i in range(50):
         # 样本路径
-        filepath = 'classroom_data_unit/DX/O/gresture_O_location_1_' + str(i) +'.npy'
+        filepath = 'CSI/classroom_data_unit/DX/O/gresture_O_location_1_' + str(i) +'.npy'
         # 读取样本
         scale_csi = read_sample(filepath)
         # 低通滤波
@@ -262,7 +264,7 @@ if __name__ == '__main__':
     csi_X = np.empty((50,6))
     for i in range(50):
         # 样本路径
-        filepath = 'classroom_data_unit/DX/X/gresture_X_location_1_' + str(i) +'.npy'
+        filepath = 'CSI/classroom_data_unit/DX/X/gresture_X_location_1_' + str(i) +'.npy'
         # 读取样本
         scale_csi = read_sample(filepath)
         # 低通滤波
@@ -283,7 +285,7 @@ if __name__ == '__main__':
     csi_PO = np.empty((50,6))
     for i in range(50):
         # 样本路径
-        filepath = 'classroom_data_unit/DX/PO/gresture_PO_location_1_' + str(i) +'.npy'
+        filepath = 'CSI/classroom_data_unit/DX/PO/gresture_PO_location_1_' + str(i) +'.npy'
         # 读取样本
         scale_csi = read_sample(filepath)
         # 低通滤波
@@ -308,24 +310,55 @@ if __name__ == '__main__':
     train_feature, test_feature, train_label, test_label = train_test_split(feature, label, random_state=1, test_size=0.3)
     #! 训练模型 决策树
     # # 建立模型
-    # tree = DecisionTreeClassifier()
+    # DTtree = DecisionTreeClassifier()
+    # print('================决策树====================')
     # # 训练模型
-    # tree = tree.fit(train_feature, train_label)
+    # DTtree = DTtree.fit(train_feature, train_label)
     # # 准确率
-    # score_train = tree.score(train_feature, train_label)
+    # score_train = DTtree.score(train_feature, train_label)
     # print('模型训练准确率：', format(score_train))
-    # score_test = tree.score(test_feature, test_label)
+    # score_test = DTtree.score(test_feature, test_label)
     # print('模型预测准确率：', format(score_test))
-    #! 提升树
-    #model = AdaBoostClassifier(n_estimators=200, random_state=0)
-    model = GradientBoostingClassifier(n_estimators=200, learning_rate=1.0, max_depth=2, random_state=0)
-    train_label = np.reshape(train_label, (-1))
-    model.fit(train_feature, train_label)
-    score_train = model.score(train_feature, train_label)
+    # pred_label = DTtree.predict(test_feature)
+    # report = classification_report(test_label, pred_label)
+    # print(report)
+    # #! 提升树
+    # #model = AdaBoostClassifier(n_estimators=200, random_state=0)
+    # model = GradientBoostingClassifier(n_estimators=200, learning_rate=1.0, max_depth=2, random_state=0)
+    # print('================提升树====================')
+    # train_label = np.reshape(train_label, (-1))
+    # model.fit(train_feature, train_label)
+    # score_train = model.score(train_feature, train_label)
+    # print('模型训练准确率：', format(score_train))
+    # score_test = model.score(test_feature, test_label)
+    # print('模型预测准确率：', format(score_test))
+    # pred_label = model.predict(test_feature)
+    # report = classification_report(test_label, pred_label)
+    # print(report)
+    # #! 支持向量机
+    # svm_model = svm.LinearSVC()
+    # print('================SVM====================')
+    # svm_model.fit(train_feature, train_label)
+    # # 准确率
+    # score_train = svm_model.score(train_feature, train_label)
+    # print('模型训练准确率：', format(score_train))
+    # score_test = svm_model.score(test_feature, test_label)
+    # print('模型预测准确率：', format(score_test))
+    # pred_label = svm_model.predict(test_feature)
+    # report = classification_report(test_label, pred_label)
+    # print(report)
+    #! KNN
+    #! HMM
+    #! DA
+    DA_model = LinearDiscriminantAnalysis()
+    print('================决策分析====================')
+    DA_model.fit(train_feature, train_label)
+    # 准确率
+    score_train = DA_model.score(train_feature, train_label)
     print('模型训练准确率：', format(score_train))
-    score_test = model.score(test_feature, test_label)
+    score_test = DA_model.score(test_feature, test_label)
     print('模型预测准确率：', format(score_test))
-    pred_label = model.predict(test_feature)
+    pred_label = DA_model.predict(test_feature)
     report = classification_report(test_label, pred_label)
     print(report)
     #* 记录程序运行时间，结束时间
