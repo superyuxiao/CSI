@@ -28,6 +28,7 @@ from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.metrics import accuracy_score
+from sklearn.metrics import classification_report
 import matplotlib.pyplot as plt
 from scipy import signal
 import datetime
@@ -42,7 +43,8 @@ def get_scale_csi(csi_st):
     #Calculate the scale factor between normalized CSI and RSSI (mW)
     csi_sq = np.multiply(csi, np.conj(csi)).real
     csi_pwr = np.sum(csi_sq, axis=0)
-    csi_pwr = csi_pwr.reshape(1, csi_pwr.shape[0], -1)
+    # csi_pwr = csi_pwr.reshape(1, csi_pwr.shape[0], -1)
+    csi_pwr = np.reshape(csi_pwr,(csi_pwr.shape[0],-1))
     rssi_pwr = dbinv(get_total_rss(csi_st))
 
     scale = rssi_pwr / (csi_pwr / 30)
@@ -175,7 +177,7 @@ def PCA_9(csi_abs, n_components, whiten):
     
     pca = PCA(n_components=n_components, whiten=whiten)
     # 设置csi容器，格式为样本长度（帧数）*主成分数n_components*发送天线3*接收天线3
-    csi_pca  = np.empty((len(csi_abs),n_components,3,3))
+    csi_pca  = np.empty((len(scale_csi),n_components,3,3))
     for i in range(3):
         for j in range(3):
             data = csi_abs[:,:,i,j]
@@ -236,13 +238,98 @@ if __name__ == '__main__':
     print(starttime)
     # 不用科学计数法显示
     np.set_printoptions(suppress=True)
-    csi = np.empty((3,5,50,800,30,3,3))
-    filepath = 'classroom_data_unit/DX/O/gresture_O_location_1_23.npy'
-    scale_csi = read_sample(filepath)
-    print(csi.shape)
-    csi[1,1,1,:,:,1,1] = scale_csi[20:820,:,1,1]
-    print(csi[1,1,1,:,:,1,1])
-    print(csi.shape)
+    #! 手势O，位置1
+    csi_O = np.empty((50,6))
+    for i in range(50):
+        # 样本路径
+        filepath = 'classroom_data_unit/DX/O/gresture_O_location_1_' + str(i) +'.npy'
+        # 读取样本
+        scale_csi = read_sample(filepath)
+        # 低通滤波
+        csi_lowpass = butterworth_lowpass(scale_csi, 7, 0.01)
+        # PCA
+        csi_pca_9 = PCA_9(csi_abs=csi_lowpass, n_components=1, whiten=False)
+        # 画幅度图
+        #plt_9_amplitude(csi_pca_9,range(1))
+        # 特征提取
+        csi_feature_9_5 = csi_feature(csi_pca_9)
+        # 只选取天线对0-0
+        csi_feature_5 = csi_feature_9_5[:,0,0,0]
+        # 添加标签
+        csi_O[i] = np.append(csi_feature_5, 0)
+        csi_O.dtype = 'float64'
+    print(datetime.datetime.now())
+    #! 手势X，位置1
+    csi_X = np.empty((50,6))
+    for i in range(50):
+        # 样本路径
+        filepath = 'classroom_data_unit/DX/X/gresture_X_location_1_' + str(i) +'.npy'
+        # 读取样本
+        scale_csi = read_sample(filepath)
+        # 低通滤波
+        csi_lowpass = butterworth_lowpass(scale_csi, 7, 0.01)
+        # PCA
+        csi_pca_9 = PCA_9(csi_abs=csi_lowpass, n_components=1, whiten=False)
+        # 画幅度图
+        #plt_9_amplitude(csi_pca_9,range(1))
+        # 特征提取
+        csi_feature_9_5 = csi_feature(csi_pca_9)
+        # 只选取天线对0-0
+        csi_feature_5 = csi_feature_9_5[:,0,0,0]
+        # 添加标签
+        csi_X[i] = np.append(csi_feature_5, 1)
+        csi_X.dtype = 'float64'
+    print(datetime.datetime.now())
+    #! 手势PO，位置1
+    csi_PO = np.empty((50,6))
+    for i in range(50):
+        # 样本路径
+        filepath = 'classroom_data_unit/DX/PO/gresture_PO_location_1_' + str(i) +'.npy'
+        # 读取样本
+        scale_csi = read_sample(filepath)
+        # 低通滤波
+        csi_lowpass = butterworth_lowpass(scale_csi, 7, 0.01)
+        # PCA
+        csi_pca_9 = PCA_9(csi_abs=csi_lowpass, n_components=1, whiten=False)
+        # 画幅度图
+        #plt_9_amplitude(csi_pca_9,range(1))
+        # 特征提取
+        csi_feature_9_5 = csi_feature(csi_pca_9)
+        # 只选取天线对0-0
+        csi_feature_5 = csi_feature_9_5[:,0,0,0]
+        # 添加标签
+        csi_PO[i] = np.append(csi_feature_5, 2)
+        csi_PO.dtype = 'float64'
+
+    print(datetime.datetime.now())
+    #! 整合所有样本，乱序，分割
+    csi_1 = np.array((csi_O, csi_X, csi_PO))
+    csi_1 = np.reshape(csi_1, (-1,6))
+    feature, label = np.split(csi_1, (5,), axis=1) #feature(150,5),label(150,1)
+    train_feature, test_feature, train_label, test_label = train_test_split(feature, label, random_state=1, test_size=0.3)
+    #! 训练模型 决策树
+    # # 建立模型
+    # tree = DecisionTreeClassifier()
+    # # 训练模型
+    # tree = tree.fit(train_feature, train_label)
+    # # 准确率
+    # score_train = tree.score(train_feature, train_label)
+    # print('模型训练准确率：', format(score_train))
+    # score_test = tree.score(test_feature, test_label)
+    # print('模型预测准确率：', format(score_test))
+    #! 提升树
+    #model = AdaBoostClassifier(n_estimators=200, random_state=0)
+    model = GradientBoostingClassifier(n_estimators=200, learning_rate=1.0, max_depth=2, random_state=0)
+    train_label = np.reshape(train_label, (-1))
+    model.fit(train_feature, train_label)
+    score_train = model.score(train_feature, train_label)
+    print('模型训练准确率：', format(score_train))
+    score_test = model.score(test_feature, test_label)
+    print('模型预测准确率：', format(score_test))
+    pred_label = model.predict(test_feature)
+    report = classification_report(test_label, pred_label)
+    print(report)
     #* 记录程序运行时间，结束时间
     endtime = datetime.datetime.now()
     print("程序运行时间：", endtime - starttime)
+    
