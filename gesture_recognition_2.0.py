@@ -25,7 +25,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.decomposition import PCA
 from sklearn import svm
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
-from sklearn.impute import KNNImputer
+from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.ensemble import GradientBoostingClassifier
@@ -263,74 +263,73 @@ if __name__ == '__main__':
     #* 记录程序运行时间，开始时间
     starttime = datetime.datetime.now()
     print(starttime)
-    # 不用科学计数法显示
+    #? 不用科学计数法显示
     np.set_printoptions(suppress=True)
-    #* DX
-    #! 手势O，位置1
+    #* 读取数据
+    #! DX
+    # 手势O，位置1
     filepath_O_1 = 'CSI/classroom_data_unit/DX/O/gresture_O_location_1_'
     csi_DX_O_1 = data_processing(filepath_O_1, 0)
-    print(datetime.datetime.now())
-    #! 手势X，位置1
+    # 手势X，位置1
     filepath_X_1 = 'CSI/classroom_data_unit/DX/X/gresture_X_location_1_'
     csi_DX_X_1 = data_processing(filepath_X_1, 1)
-    print(datetime.datetime.now())
-    #! 手势PO，位置1
+    # 手势PO，位置1
     filepath_PO_1 = 'CSI/classroom_data_unit/DX/PO/gresture_PO_location_1_'
     csi_DX_PO_1 = data_processing(filepath_PO_1, 2)
-    print(datetime.datetime.now())
-    #? 整合
+    # 整合
     csi_DX_1 = np.array((csi_DX_O_1, csi_DX_X_1, csi_DX_PO_1))
     csi_DX_1 = np.reshape(csi_DX_1, (-1,6))
-    #* LJP
-    #! 手势O，位置1
+    print(datetime.datetime.now())
+    #! LJP
+    # 手势O，位置1
     filepath_O_1 = 'CSI/classroom_data_unit/LJP/O/gresture_O_location_1_'
     csi_LJP_O_1 = data_processing(filepath_O_1, 0)
-    print(datetime.datetime.now())
-    #! 手势X，位置1
+    # 手势X，位置1
     filepath_X_1 = 'CSI/classroom_data_unit/LJP/X/gresture_X_location_1_'
     csi_LJP_X_1 = data_processing(filepath_X_1, 1)
-    print(datetime.datetime.now())
-    #! 手势PO，位置1
+    # 手势PO，位置1
     filepath_PO_1 = 'CSI/classroom_data_unit/LJP/PO/gresture_PO_location_1_'
     csi_LJP_PO_1 = data_processing(filepath_PO_1, 2)
-    print(datetime.datetime.now())
-    #? 整合
+    # 整合
     csi_LJP_1 = np.array((csi_LJP_O_1, csi_LJP_X_1, csi_LJP_PO_1))
     csi_LJP_1 = np.reshape(csi_LJP_1, (-1,6))
-    #* LZW
-    #! 手势O，位置1
+    print(datetime.datetime.now())
+    #! LZW
+    # 手势O，位置1
     filepath_O_1 = 'CSI/classroom_data_unit/LZW/O/gresture_O_location_1_'
     csi_LZW_O_1 = data_processing(filepath_O_1, 0)
-    print(datetime.datetime.now())
-    #! 手势X，位置1
+    # 手势X，位置1
     filepath_X_1 = 'CSI/classroom_data_unit/LZW/X/gresture_X_location_1_'
     csi_LZW_X_1 = data_processing(filepath_X_1, 1)
-    print(datetime.datetime.now())
-    #! 手势PO，位置1
+    # 手势PO，位置1
     filepath_PO_1 = 'CSI/classroom_data_unit/LZW/PO/gresture_PO_location_1_'
     csi_LZW_PO_1 = data_processing(filepath_PO_1, 2)
-    print(datetime.datetime.now())
-    #? 整合
+    # 整合
     csi_LZW_1 = np.array((csi_LZW_O_1, csi_LZW_X_1, csi_LZW_PO_1))
     csi_LZW_1 = np.reshape(csi_LZW_1, (-1,6))
-    #* MYW
-    #! 手势O，位置1
-    # 只有手势O
+    print(datetime.datetime.now())
+    #! MYW
+    # 手势O，位置1
+    #? 只有手势O
     filepath_O_1 = 'CSI/classroom_data_unit/MYW/O/gresture_O_location_1_'
     csi_MYW_O_1 = data_processing(filepath_O_1, 0)
-    print(datetime.datetime.now())
-    #? 整合
+    # 整合
     csi_MYW_1 = np.array((csi_MYW_O_1))
     csi_MYW_1 = np.reshape(csi_MYW_1, (-1,6))
-    #! 整合所有样本，乱序，分割
+    print(datetime.datetime.now())
+    #* 整合所有样本，乱序，分割
     # TODO 对于样本训练集和测试集的分割：每个人的比例是否一致？还是一些人训练、另一些人测试？
+    # 整理数据集
     csi_1 = np.array((csi_DX_1, csi_LJP_1, csi_LZW_1))
     csi_1 = np.reshape(csi_1, (-1,6))
     csi_1 = np.append(csi_1, csi_MYW_1, axis=0)
     csi_1 = np.reshape(csi_1, (-1,6))
+    # 分割特征和标签
     feature, label = np.split(csi_1, (5,), axis=1) #feature(150,5),label(150,1) #pylint: disable=unbalanced-tuple-unpacking #防止出现一条警告
+    # 划分训练集和测试集
     train_feature, test_feature, train_label, test_label = train_test_split(feature, label, random_state=1, test_size=0.3)
-    #! 训练模型 决策树
+    #* 识别方法
+    #! 决策树
     # 建立模型
     DTtree = DecisionTreeClassifier()
     print('========================决策树============================')
@@ -341,25 +340,32 @@ if __name__ == '__main__':
     print('模型训练准确率：', format(score_train))
     score_test = DTtree.score(test_feature, test_label)
     print('模型预测准确率：', format(score_test))
+    # 精确率 召回率 调和均值F1
     pred_label = DTtree.predict(test_feature)
     report = classification_report(test_label, pred_label)
     print(report)
     #! 提升树
+    # 建立模型
     #model = AdaBoostClassifier(n_estimators=200, random_state=0)
     model = GradientBoostingClassifier(n_estimators=200, learning_rate=1.0, max_depth=2, random_state=0)
     print('========================提升树============================')
+    # 训练模型
     train_label = np.reshape(train_label, (-1))
     model.fit(train_feature, train_label)
+    # 准确率
     score_train = model.score(train_feature, train_label)
     print('模型训练准确率：', format(score_train))
     score_test = model.score(test_feature, test_label)
     print('模型预测准确率：', format(score_test))
+    # 精确率 召回率 调和均值F1
     pred_label = model.predict(test_feature)
     report = classification_report(test_label, pred_label)
     print(report)
     #! 支持向量机
-    svm_model = svm.NuSVC() #max_iter=10000
+    # 建立模型
+    svm_model = svm.NuSVC()
     print('========================SVM============================')
+    # 训练模型
     train_label = np.reshape(train_label, (-1))
     svm_model.fit(train_feature, train_label)
     # 准确率
@@ -367,39 +373,58 @@ if __name__ == '__main__':
     print('模型训练准确率：', format(score_train))
     score_test = svm_model.score(test_feature, test_label)
     print('模型预测准确率：', format(score_test))
+    # 精确率 召回率 调和均值F1
     pred_label = svm_model.predict(test_feature)
     report = classification_report(test_label, pred_label)
     print(report)
-    #! KNN
-    #! HMM
-    #! DA
+    #! 决策分析
+    # 建立模型
     DA_model = LinearDiscriminantAnalysis()
     print('========================决策分析============================')
+    # 训练模型
     DA_model.fit(train_feature, train_label)
     # 准确率
     score_train = DA_model.score(train_feature, train_label)
     print('模型训练准确率：', format(score_train))
     score_test = DA_model.score(test_feature, test_label)
     print('模型预测准确率：', format(score_test))
+    # 精确率 召回率 调和均值F1
     pred_label = DA_model.predict(test_feature)
     report = classification_report(test_label, pred_label)
     print(report)
+    #! KNN  
+    # 建立模型
+    knn_model = KNeighborsClassifier(n_neighbors=2)
+    print('========================K近邻============================')
+    # 训练模型
+    train_label = np.reshape(train_label, (-1))
+    knn_model.fit(train_feature, train_label)
+    # 准确率
+    score_train = knn_model.score(train_feature, train_label)
+    print('模型训练准确率：', format(score_train))
+    score_test = knn_model.score(test_feature, test_label)
+    print('模型预测准确率：', format(score_test))
+    # 精确率 召回率 调和均值F1
+    pred_label = knn_model.predict(test_feature)
+    report = classification_report(test_label, pred_label)
+    print(report)
+
     #* 记录程序运行时间，结束时间
     endtime = datetime.datetime.now()
     print("程序运行时间：", endtime - starttime)
     
 # ========================决策树============================
 # 模型训练准确率： 1.0
-# 模型预测准确率： 0.7066666666666667
+# 模型预测准确率： 0.7266666666666667
 #               precision    recall  f1-score   support
 
-#          0.0       0.86      0.81      0.83        67
-#          1.0       0.60      0.68      0.63        37
-#          2.0       0.60      0.59      0.59        46
+#          0.0       0.87      0.81      0.84        67
+#          1.0       0.62      0.70      0.66        37
+#          2.0       0.63      0.63      0.63        46
 
-#     accuracy                           0.71       150
-#    macro avg       0.68      0.69      0.69       150
-# weighted avg       0.71      0.71      0.71       150
+#     accuracy                           0.73       150
+#    macro avg       0.71      0.71      0.71       150
+# weighted avg       0.74      0.73      0.73       150
 
 # ========================提升树============================
 # 模型训练准确率： 1.0
@@ -439,3 +464,16 @@ if __name__ == '__main__':
 #     accuracy                           0.79       150
 #    macro avg       0.78      0.79      0.77       150
 # weighted avg       0.81      0.79      0.79       150
+
+# ========================K近邻============================
+# 模型训练准确率： 0.8457142857142858
+# 模型预测准确率： 0.6733333333333333
+#               precision    recall  f1-score   support
+
+#          0.0       0.70      0.84      0.76        67
+#          1.0       0.61      0.68      0.64        37
+#          2.0       0.69      0.43      0.53        46
+
+#     accuracy                           0.67       150
+#    macro avg       0.67      0.65      0.65       150
+# weighted avg       0.67      0.67      0.66       150
