@@ -278,6 +278,9 @@ if __name__ == '__main__':
     filepath_PO_1 = 'CSI/classroom_data_unit/DX/PO/gresture_PO_location_1_'
     csi_DX_PO_1 = data_processing(filepath_PO_1, 2)
     print(datetime.datetime.now())
+    #? 整合
+    csi_DX_1 = np.array((csi_DX_O_1, csi_DX_X_1, csi_DX_PO_1))
+    csi_DX_1 = np.reshape(csi_DX_1, (-1,6))
     #* LJP
     #! 手势O，位置1
     filepath_O_1 = 'CSI/classroom_data_unit/LJP/O/gresture_O_location_1_'
@@ -291,17 +294,39 @@ if __name__ == '__main__':
     filepath_PO_1 = 'CSI/classroom_data_unit/LJP/PO/gresture_PO_location_1_'
     csi_LJP_PO_1 = data_processing(filepath_PO_1, 2)
     print(datetime.datetime.now())
-    #* LJW
-    #* MYW
-    #! 整合所有样本，乱序，分割
-    #? DX
-    csi_DX_1 = np.array((csi_DX_O_1, csi_DX_X_1, csi_DX_PO_1))
-    csi_DX_1 = np.reshape(csi_DX_1, (-1,6))
-    #? LJP
+    #? 整合
     csi_LJP_1 = np.array((csi_LJP_O_1, csi_LJP_X_1, csi_LJP_PO_1))
     csi_LJP_1 = np.reshape(csi_LJP_1, (-1,6))
-    #? 乱序分割
-    csi_1 = np.array((csi_DX_1, csi_LJP_1))
+    #* LZW
+    #! 手势O，位置1
+    filepath_O_1 = 'CSI/classroom_data_unit/LZW/O/gresture_O_location_1_'
+    csi_LZW_O_1 = data_processing(filepath_O_1, 0)
+    print(datetime.datetime.now())
+    #! 手势X，位置1
+    filepath_X_1 = 'CSI/classroom_data_unit/LZW/X/gresture_X_location_1_'
+    csi_LZW_X_1 = data_processing(filepath_X_1, 1)
+    print(datetime.datetime.now())
+    #! 手势PO，位置1
+    filepath_PO_1 = 'CSI/classroom_data_unit/LZW/PO/gresture_PO_location_1_'
+    csi_LZW_PO_1 = data_processing(filepath_PO_1, 2)
+    print(datetime.datetime.now())
+    #? 整合
+    csi_LZW_1 = np.array((csi_LZW_O_1, csi_LZW_X_1, csi_LZW_PO_1))
+    csi_LZW_1 = np.reshape(csi_LZW_1, (-1,6))
+    #* MYW
+    #! 手势O，位置1
+    # 只有手势O
+    filepath_O_1 = 'CSI/classroom_data_unit/MYW/O/gresture_O_location_1_'
+    csi_MYW_O_1 = data_processing(filepath_O_1, 0)
+    print(datetime.datetime.now())
+    #? 整合
+    csi_MYW_1 = np.array((csi_MYW_O_1))
+    csi_MYW_1 = np.reshape(csi_MYW_1, (-1,6))
+    #! 整合所有样本，乱序，分割
+    # TODO 对于样本训练集和测试集的分割：每个人的比例是否一致？还是一些人训练、另一些人测试？
+    csi_1 = np.array((csi_DX_1, csi_LJP_1, csi_LZW_1))
+    csi_1 = np.reshape(csi_1, (-1,6))
+    csi_1 = np.append(csi_1, csi_MYW_1, axis=0)
     csi_1 = np.reshape(csi_1, (-1,6))
     feature, label = np.split(csi_1, (5,), axis=1) #feature(150,5),label(150,1) #pylint: disable=unbalanced-tuple-unpacking #防止出现一条警告
     train_feature, test_feature, train_label, test_label = train_test_split(feature, label, random_state=1, test_size=0.3)
@@ -365,52 +390,52 @@ if __name__ == '__main__':
     
 # ========================决策树============================
 # 模型训练准确率： 1.0
-# 模型预测准确率： 0.6333333333333333
+# 模型预测准确率： 0.7066666666666667
 #               precision    recall  f1-score   support
 
-#          0.0       0.71      0.62      0.67        32
-#          1.0       0.67      0.62      0.64        29
-#          2.0       0.54      0.66      0.59        29
+#          0.0       0.86      0.81      0.83        67
+#          1.0       0.60      0.68      0.63        37
+#          2.0       0.60      0.59      0.59        46
 
-#     accuracy                           0.63        90
-#    macro avg       0.64      0.63      0.63        90
-# weighted avg       0.64      0.63      0.64        90
+#     accuracy                           0.71       150
+#    macro avg       0.68      0.69      0.69       150
+# weighted avg       0.71      0.71      0.71       150
 
 # ========================提升树============================
 # 模型训练准确率： 1.0
-# 模型预测准确率： 0.7555555555555555
+# 模型预测准确率： 0.7533333333333333
 #               precision    recall  f1-score   support
 
-#          0.0       0.85      0.69      0.76        32
-#          1.0       0.82      0.79      0.81        29
-#          2.0       0.64      0.79      0.71        29
+#          0.0       0.88      0.75      0.81        67
+#          1.0       0.71      0.73      0.72        37
+#          2.0       0.65      0.78      0.71        46
 
-#     accuracy                           0.76        90
-#    macro avg       0.77      0.76      0.76        90
-# weighted avg       0.77      0.76      0.76        90
+#     accuracy                           0.75       150
+#    macro avg       0.75      0.75      0.75       150
+# weighted avg       0.77      0.75      0.76       150
 
 # ========================SVM============================
-# 模型训练准确率： 0.7857142857142857
-# 模型预测准确率： 0.7444444444444445
+# 模型训练准确率： 0.7542857142857143
+# 模型预测准确率： 0.78
 #               precision    recall  f1-score   support
 
-#          0.0       0.95      0.59      0.73        32
-#          1.0       0.74      0.90      0.81        29
-#          2.0       0.63      0.76      0.69        29
+#          0.0       0.93      0.82      0.87        67
+#          1.0       0.67      0.65      0.66        37
+#          2.0       0.69      0.83      0.75        46
 
-#     accuracy                           0.74        90
-#    macro avg       0.77      0.75      0.74        90
-# weighted avg       0.78      0.74      0.74        90
+#     accuracy                           0.78       150
+#    macro avg       0.76      0.77      0.76       150
+# weighted avg       0.79      0.78      0.78       150
 
 # ========================决策分析============================
-# 模型训练准确率： 0.7476190476190476
-# 模型预测准确率： 0.7444444444444445
+# 模型训练准确率： 0.6942857142857143
+# 模型预测准确率： 0.7866666666666666
 #               precision    recall  f1-score   support
 
-#          0.0       1.00      0.66      0.79        32
-#          1.0       0.71      0.83      0.76        29
-#          2.0       0.63      0.76      0.69        29
+#          0.0       0.96      0.82      0.89        67
+#          1.0       0.64      0.86      0.74        37
+#          2.0       0.72      0.67      0.70        46
 
-#     accuracy                           0.74        90
-#    macro avg       0.78      0.75      0.75        90
-# weighted avg       0.79      0.74      0.75        90
+#     accuracy                           0.79       150
+#    macro avg       0.78      0.79      0.77       150
+# weighted avg       0.81      0.79      0.79       150
