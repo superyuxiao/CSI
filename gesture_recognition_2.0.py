@@ -24,6 +24,8 @@ from sklearn import model_selection
 from sklearn.model_selection import train_test_split
 from sklearn.decomposition import PCA
 from sklearn import svm
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+from sklearn.impute import KNNImputer
 from sklearn.tree import DecisionTreeClassifier, plot_tree
 from sklearn.ensemble import AdaBoostClassifier
 from sklearn.ensemble import GradientBoostingClassifier
@@ -177,7 +179,7 @@ def PCA_9(csi_abs, n_components, whiten):
     
     pca = PCA(n_components=n_components, whiten=whiten)
     # 设置csi容器，格式为样本长度（帧数）*主成分数n_components*发送天线3*接收天线3
-    csi_pca  = np.empty((len(scale_csi),n_components,3,3))
+    csi_pca  = np.empty((len(csi_abs),n_components,3,3))
     for i in range(3):
         for j in range(3):
             data = csi_abs[:,:,i,j]
@@ -230,6 +232,31 @@ def csi_feature(csi_pca):
 
     return csi_9_feature
 
+# 不同人不同位置具有相同的数据处理过程
+# 根据不同工程，对应修改函数代码
+def data_processing(path, label):
+    csi_data = np.empty((50,6))
+    for i in range(50):
+        # 样本路径
+        filepath = path + str(i) +'.npy'
+        # 读取样本
+        scale_csi = read_sample(filepath)
+        # 低通滤波
+        csi_lowpass = butterworth_lowpass(scale_csi, 7, 0.01)
+        # PCA
+        csi_pca_9 = PCA_9(csi_abs=csi_lowpass, n_components=1, whiten=False)
+        # 画幅度图
+        #plt_9_amplitude(csi_pca_9,range(1))
+        # 特征提取
+        csi_feature_9_5 = csi_feature(csi_pca_9)
+        # 只选取天线对0-0
+        csi_feature_5 = csi_feature_9_5[:,0,0,0]
+        # 添加标签
+        csi_data[i] = np.append(csi_feature_5, label)
+        csi_data.dtype = 'float64'
+        # 返回数据
+        data = csi_data
+    return data
 
 if __name__ == '__main__':
 
@@ -238,88 +265,64 @@ if __name__ == '__main__':
     print(starttime)
     # 不用科学计数法显示
     np.set_printoptions(suppress=True)
+    #* DX
     #! 手势O，位置1
-    csi_O = np.empty((50,6))
-    for i in range(50):
-        # 样本路径
-        filepath = 'classroom_data_unit/DX/O/gresture_O_location_1_' + str(i) +'.npy'
-        # 读取样本
-        scale_csi = read_sample(filepath)
-        # 低通滤波
-        csi_lowpass = butterworth_lowpass(scale_csi, 7, 0.01)
-        # PCA
-        csi_pca_9 = PCA_9(csi_abs=csi_lowpass, n_components=1, whiten=False)
-        # 画幅度图
-        #plt_9_amplitude(csi_pca_9,range(1))
-        # 特征提取
-        csi_feature_9_5 = csi_feature(csi_pca_9)
-        # 只选取天线对0-0
-        csi_feature_5 = csi_feature_9_5[:,0,0,0]
-        # 添加标签
-        csi_O[i] = np.append(csi_feature_5, 0)
-        csi_O.dtype = 'float64'
+    filepath_O_1 = 'CSI/classroom_data_unit/DX/O/gresture_O_location_1_'
+    csi_DX_O_1 = data_processing(filepath_O_1, 0)
     print(datetime.datetime.now())
     #! 手势X，位置1
-    csi_X = np.empty((50,6))
-    for i in range(50):
-        # 样本路径
-        filepath = 'classroom_data_unit/DX/X/gresture_X_location_1_' + str(i) +'.npy'
-        # 读取样本
-        scale_csi = read_sample(filepath)
-        # 低通滤波
-        csi_lowpass = butterworth_lowpass(scale_csi, 7, 0.01)
-        # PCA
-        csi_pca_9 = PCA_9(csi_abs=csi_lowpass, n_components=1, whiten=False)
-        # 画幅度图
-        #plt_9_amplitude(csi_pca_9,range(1))
-        # 特征提取
-        csi_feature_9_5 = csi_feature(csi_pca_9)
-        # 只选取天线对0-0
-        csi_feature_5 = csi_feature_9_5[:,0,0,0]
-        # 添加标签
-        csi_X[i] = np.append(csi_feature_5, 1)
-        csi_X.dtype = 'float64'
+    filepath_X_1 = 'CSI/classroom_data_unit/DX/X/gresture_X_location_1_'
+    csi_DX_X_1 = data_processing(filepath_X_1, 1)
     print(datetime.datetime.now())
     #! 手势PO，位置1
-    csi_PO = np.empty((50,6))
-    for i in range(50):
-        # 样本路径
-        filepath = 'classroom_data_unit/DX/PO/gresture_PO_location_1_' + str(i) +'.npy'
-        # 读取样本
-        scale_csi = read_sample(filepath)
-        # 低通滤波
-        csi_lowpass = butterworth_lowpass(scale_csi, 7, 0.01)
-        # PCA
-        csi_pca_9 = PCA_9(csi_abs=csi_lowpass, n_components=1, whiten=False)
-        # 画幅度图
-        #plt_9_amplitude(csi_pca_9,range(1))
-        # 特征提取
-        csi_feature_9_5 = csi_feature(csi_pca_9)
-        # 只选取天线对0-0
-        csi_feature_5 = csi_feature_9_5[:,0,0,0]
-        # 添加标签
-        csi_PO[i] = np.append(csi_feature_5, 2)
-        csi_PO.dtype = 'float64'
-
+    filepath_PO_1 = 'CSI/classroom_data_unit/DX/PO/gresture_PO_location_1_'
+    csi_DX_PO_1 = data_processing(filepath_PO_1, 2)
     print(datetime.datetime.now())
+    #* LJP
+    #! 手势O，位置1
+    filepath_O_1 = 'CSI/classroom_data_unit/LJP/O/gresture_O_location_1_'
+    csi_LJP_O_1 = data_processing(filepath_O_1, 0)
+    print(datetime.datetime.now())
+    #! 手势X，位置1
+    filepath_X_1 = 'CSI/classroom_data_unit/LJP/X/gresture_X_location_1_'
+    csi_LJP_X_1 = data_processing(filepath_X_1, 1)
+    print(datetime.datetime.now())
+    #! 手势PO，位置1
+    filepath_PO_1 = 'CSI/classroom_data_unit/LJP/PO/gresture_PO_location_1_'
+    csi_LJP_PO_1 = data_processing(filepath_PO_1, 2)
+    print(datetime.datetime.now())
+    #* LJW
+    #* MYW
     #! 整合所有样本，乱序，分割
-    csi_1 = np.array((csi_O, csi_X, csi_PO))
+    #? DX
+    csi_DX_1 = np.array((csi_DX_O_1, csi_DX_X_1, csi_DX_PO_1))
+    csi_DX_1 = np.reshape(csi_DX_1, (-1,6))
+    #? LJP
+    csi_LJP_1 = np.array((csi_LJP_O_1, csi_LJP_X_1, csi_LJP_PO_1))
+    csi_LJP_1 = np.reshape(csi_LJP_1, (-1,6))
+    #? 乱序分割
+    csi_1 = np.array((csi_DX_1, csi_LJP_1))
     csi_1 = np.reshape(csi_1, (-1,6))
-    feature, label = np.split(csi_1, (5,), axis=1) #feature(150,5),label(150,1)
+    feature, label = np.split(csi_1, (5,), axis=1) #feature(150,5),label(150,1) #pylint: disable=unbalanced-tuple-unpacking #防止出现一条警告
     train_feature, test_feature, train_label, test_label = train_test_split(feature, label, random_state=1, test_size=0.3)
     #! 训练模型 决策树
-    # # 建立模型
-    # tree = DecisionTreeClassifier()
-    # # 训练模型
-    # tree = tree.fit(train_feature, train_label)
-    # # 准确率
-    # score_train = tree.score(train_feature, train_label)
-    # print('模型训练准确率：', format(score_train))
-    # score_test = tree.score(test_feature, test_label)
-    # print('模型预测准确率：', format(score_test))
+    # 建立模型
+    DTtree = DecisionTreeClassifier()
+    print('========================决策树============================')
+    # 训练模型
+    DTtree = DTtree.fit(train_feature, train_label)
+    # 准确率
+    score_train = DTtree.score(train_feature, train_label)
+    print('模型训练准确率：', format(score_train))
+    score_test = DTtree.score(test_feature, test_label)
+    print('模型预测准确率：', format(score_test))
+    pred_label = DTtree.predict(test_feature)
+    report = classification_report(test_label, pred_label)
+    print(report)
     #! 提升树
     #model = AdaBoostClassifier(n_estimators=200, random_state=0)
     model = GradientBoostingClassifier(n_estimators=200, learning_rate=1.0, max_depth=2, random_state=0)
+    print('========================提升树============================')
     train_label = np.reshape(train_label, (-1))
     model.fit(train_feature, train_label)
     score_train = model.score(train_feature, train_label)
@@ -329,7 +332,85 @@ if __name__ == '__main__':
     pred_label = model.predict(test_feature)
     report = classification_report(test_label, pred_label)
     print(report)
+    #! 支持向量机
+    svm_model = svm.NuSVC() #max_iter=10000
+    print('========================SVM============================')
+    train_label = np.reshape(train_label, (-1))
+    svm_model.fit(train_feature, train_label)
+    # 准确率
+    score_train = svm_model.score(train_feature, train_label)
+    print('模型训练准确率：', format(score_train))
+    score_test = svm_model.score(test_feature, test_label)
+    print('模型预测准确率：', format(score_test))
+    pred_label = svm_model.predict(test_feature)
+    report = classification_report(test_label, pred_label)
+    print(report)
+    #! KNN
+    #! HMM
+    #! DA
+    DA_model = LinearDiscriminantAnalysis()
+    print('========================决策分析============================')
+    DA_model.fit(train_feature, train_label)
+    # 准确率
+    score_train = DA_model.score(train_feature, train_label)
+    print('模型训练准确率：', format(score_train))
+    score_test = DA_model.score(test_feature, test_label)
+    print('模型预测准确率：', format(score_test))
+    pred_label = DA_model.predict(test_feature)
+    report = classification_report(test_label, pred_label)
+    print(report)
     #* 记录程序运行时间，结束时间
     endtime = datetime.datetime.now()
     print("程序运行时间：", endtime - starttime)
     
+# ========================决策树============================
+# 模型训练准确率： 1.0
+# 模型预测准确率： 0.6333333333333333
+#               precision    recall  f1-score   support
+
+#          0.0       0.71      0.62      0.67        32
+#          1.0       0.67      0.62      0.64        29
+#          2.0       0.54      0.66      0.59        29
+
+#     accuracy                           0.63        90
+#    macro avg       0.64      0.63      0.63        90
+# weighted avg       0.64      0.63      0.64        90
+
+# ========================提升树============================
+# 模型训练准确率： 1.0
+# 模型预测准确率： 0.7555555555555555
+#               precision    recall  f1-score   support
+
+#          0.0       0.85      0.69      0.76        32
+#          1.0       0.82      0.79      0.81        29
+#          2.0       0.64      0.79      0.71        29
+
+#     accuracy                           0.76        90
+#    macro avg       0.77      0.76      0.76        90
+# weighted avg       0.77      0.76      0.76        90
+
+# ========================SVM============================
+# 模型训练准确率： 0.7857142857142857
+# 模型预测准确率： 0.7444444444444445
+#               precision    recall  f1-score   support
+
+#          0.0       0.95      0.59      0.73        32
+#          1.0       0.74      0.90      0.81        29
+#          2.0       0.63      0.76      0.69        29
+
+#     accuracy                           0.74        90
+#    macro avg       0.77      0.75      0.74        90
+# weighted avg       0.78      0.74      0.74        90
+
+# ========================决策分析============================
+# 模型训练准确率： 0.7476190476190476
+# 模型预测准确率： 0.7444444444444445
+#               precision    recall  f1-score   support
+
+#          0.0       1.00      0.66      0.79        32
+#          1.0       0.71      0.83      0.76        29
+#          2.0       0.63      0.76      0.69        29
+
+#     accuracy                           0.74        90
+#    macro avg       0.78      0.75      0.75        90
+# weighted avg       0.79      0.74      0.75        90
