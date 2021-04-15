@@ -35,6 +35,7 @@ import matplotlib.pyplot as plt
 from scipy import signal
 import datetime
 import math
+from sklearn.metrics import plot_confusion_matrix
 
 #! 
 def get_scale_csi(csi_st):
@@ -361,6 +362,8 @@ if __name__ == '__main__':
     pred_label = DA_model.predict(test_feature)
     report = classification_report(test_label, pred_label)
     print(report)
+    plot_confusion_matrix(DA_model, X=test_feature, y_true=test_label)  
+    plt.show()
     #* 记录程序运行时间，结束时间
     endtime = datetime.datetime.now()
     print("程序运行时间：", endtime - starttime)
