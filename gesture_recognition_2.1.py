@@ -29,11 +29,13 @@ from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import classification_report
 from sklearn.metrics import plot_confusion_matrix
+from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
 import matplotlib.pyplot as plt
 from scipy import signal
 from scipy import stats
 import datetime
 import math
+import os
 
 #! 
 def get_scale_csi(csi_st):
@@ -270,13 +272,9 @@ def data_processing(path, label):
         data = csi_data
     return data
 
-if __name__ == '__main__':
+# 整合所有数据
+def get_feature_label():
 
-    #* 记录程序运行时间，开始时间
-    starttime = datetime.datetime.now()
-    print(starttime)
-    #? 不用科学计数法显示
-    np.set_printoptions(suppress=True)
     #* 读取数据
     #! DX
     # 手势O，位置1
@@ -290,7 +288,7 @@ if __name__ == '__main__':
     csi_DX_PO_1 = data_processing(filepath_PO_1, 2)
     # 整合
     csi_DX_1 = np.array((csi_DX_O_1, csi_DX_X_1, csi_DX_PO_1))
-    csi_DX_1 = np.reshape(csi_DX_1, (-1,12))    #! 注意修改
+    csi_DX_1 = np.reshape(csi_DX_1, (-1,12))
     print(datetime.datetime.now())
     #! LJP
     # 手势O，位置1
@@ -335,9 +333,40 @@ if __name__ == '__main__':
     csi_1 = np.array((csi_DX_1, csi_LJP_1, csi_LZW_1))
     csi_1 = np.reshape(csi_1, (-1,12))
     csi_1 = np.append(csi_1, csi_MYW_1, axis=0)
-    csi_1 = np.reshape(csi_1, (-1,12)) 
+    csi_1 = np.reshape(csi_1, (-1,12))
     # 分割特征和标签
     feature, label = np.split(csi_1, (11,), axis=1) #feature(150,5),label(150,1) #pylint: disable=unbalanced-tuple-unpacking #防止出现一条警告
+
+    return feature, label
+
+if __name__ == '__main__':
+
+    #* 记录程序运行时间，开始时间
+    starttime = datetime.datetime.now()
+    print(starttime)
+    #? 不用科学计数法显示
+    np.set_printoptions(suppress=True)
+    #? 缓存数据
+    path = os.path.split(os.path.abspath(__file__))[0] + '/cache/' + os.path.split(os.path.abspath(__file__))[1].split('.')[0]
+    feature_name = path + '/feature'
+    label_name = path + '/label'
+    is_feature_exists = os.path.exists(feature_name + '.npy')
+    is_label_exists = os.path.exists(label_name + '.npy')
+    if is_feature_exists and is_label_exists:
+        feature = np.load(feature_name + '.npy', allow_pickle=True)
+        label = np.load(label_name + '.npy', allow_pickle=True)
+    else:
+        isExists=os.path.exists(path)
+        if not isExists:
+            os.makedirs(path) 
+            print(path +' 创建成功')
+        else:
+            print(path +' 目录已存在')
+        #! 数据
+        feature, label = get_feature_label()
+        #! 保存
+        np.save(feature_name, feature)
+        np.save(label_name, label)
     # 划分训练集和测试集
     train_feature, test_feature, train_label, test_label = train_test_split(feature, label, random_state=1, test_size=0.3)
     #* 识别方法
@@ -356,7 +385,10 @@ if __name__ == '__main__':
     pred_label = DTtree.predict(test_feature)
     report = classification_report(test_label, pred_label)
     print(report)
-    plot_confusion_matrix(DTtree, X=test_feature, y_true=test_label)  
+    cm = confusion_matrix(test_label, pred_label, labels=DTtree.classes_)
+    # cm = cm / (sum(sum(cm))/cm.shape[0])
+    disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=DTtree.classes_)
+    disp.plot()
     plt.show()
     #! 提升树
     # 建立模型
@@ -375,8 +407,8 @@ if __name__ == '__main__':
     pred_label = model.predict(test_feature)
     report = classification_report(test_label, pred_label)
     print(report)
-    plot_confusion_matrix(model, X=test_feature, y_true=test_label)  
-    plt.show()
+    # plot_confusion_matrix(model, X=test_feature, y_true=test_label)  
+    # plt.show()
     #! 支持向量机
     # 建立模型
     svm_model = svm.NuSVC()
@@ -393,8 +425,8 @@ if __name__ == '__main__':
     pred_label = svm_model.predict(test_feature)
     report = classification_report(test_label, pred_label)
     print(report)
-    plot_confusion_matrix(svm_model, X=test_feature, y_true=test_label)  
-    plt.show()
+    # plot_confusion_matrix(svm_model, X=test_feature, y_true=test_label)  
+    # plt.show()
     #! 决策分析
     # 建立模型
     DA_model = LinearDiscriminantAnalysis()
@@ -410,8 +442,8 @@ if __name__ == '__main__':
     pred_label = DA_model.predict(test_feature)
     report = classification_report(test_label, pred_label)
     print(report)
-    plot_confusion_matrix(DA_model, X=test_feature, y_true=test_label)  
-    plt.show()
+    # plot_confusion_matrix(DA_model, X=test_feature, y_true=test_label)  
+    # plt.show()
     #! KNN  
     # 建立模型
     knn_model = KNeighborsClassifier(n_neighbors=2)
@@ -428,8 +460,8 @@ if __name__ == '__main__':
     pred_label = knn_model.predict(test_feature)
     report = classification_report(test_label, pred_label)
     print(report)
-    plot_confusion_matrix(knn_model, X=test_feature, y_true=test_label)  
-    plt.show()
+    # plot_confusion_matrix(knn_model, X=test_feature, y_true=test_label)  
+    # plt.show()
 
     #* 记录程序运行时间，结束时间
     endtime = datetime.datetime.now()
