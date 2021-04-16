@@ -28,6 +28,7 @@ from sklearn.ensemble import AdaBoostClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import classification_report
+from sklearn.metrics import plot_confusion_matrix
 import matplotlib.pyplot as plt
 from scipy import signal
 from scipy import stats
@@ -355,6 +356,8 @@ if __name__ == '__main__':
     pred_label = DTtree.predict(test_feature)
     report = classification_report(test_label, pred_label)
     print(report)
+    plot_confusion_matrix(DTtree, X=test_feature, y_true=test_label)  
+    plt.show()
     #! 提升树
     # 建立模型
     #model = AdaBoostClassifier(n_estimators=200, random_state=0)
@@ -372,6 +375,8 @@ if __name__ == '__main__':
     pred_label = model.predict(test_feature)
     report = classification_report(test_label, pred_label)
     print(report)
+    plot_confusion_matrix(model, X=test_feature, y_true=test_label)  
+    plt.show()
     #! 支持向量机
     # 建立模型
     svm_model = svm.NuSVC()
@@ -388,6 +393,8 @@ if __name__ == '__main__':
     pred_label = svm_model.predict(test_feature)
     report = classification_report(test_label, pred_label)
     print(report)
+    plot_confusion_matrix(svm_model, X=test_feature, y_true=test_label)  
+    plt.show()
     #! 决策分析
     # 建立模型
     DA_model = LinearDiscriminantAnalysis()
@@ -403,6 +410,8 @@ if __name__ == '__main__':
     pred_label = DA_model.predict(test_feature)
     report = classification_report(test_label, pred_label)
     print(report)
+    plot_confusion_matrix(DA_model, X=test_feature, y_true=test_label)  
+    plt.show()
     #! KNN  
     # 建立模型
     knn_model = KNeighborsClassifier(n_neighbors=2)
@@ -419,6 +428,8 @@ if __name__ == '__main__':
     pred_label = knn_model.predict(test_feature)
     report = classification_report(test_label, pred_label)
     print(report)
+    plot_confusion_matrix(knn_model, X=test_feature, y_true=test_label)  
+    plt.show()
 
     #* 记录程序运行时间，结束时间
     endtime = datetime.datetime.now()

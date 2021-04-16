@@ -1,3 +1,20 @@
+#!E:\Python\Python368-64\python.exe
+# -*- encoding: utf-8 -*-
+'''
+@File    :   gesture_recognition_3.0.py
+@Time    :   2021/04/15 21:06:43
+@Author  :   Yu Xiao 于潇 
+@Version :   1.0
+@Contact :   superyuxiao@icloud.com
+@License :   (C)Copyright 2020-2021, Key Laboratory of University Wireless Communication
+                Beijing University of Posts and Telecommunications
+@Desc    :   None
+'''
+
+# ------------------------------ file details ------------------------------ #
+# 四个人，一个位置，巴特沃斯低通，PCA，九个天线对，81*9输入CNN
+# ------------------------------ file details ------------------------------ #
+
 # 加载相关库
 import os
 import random
@@ -22,6 +39,7 @@ from sklearn.ensemble import AdaBoostClassifier
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import classification_report
+from sklearn.metrics import plot_confusion_matrix
 import matplotlib.pyplot as plt
 from scipy import signal
 from scipy import stats
