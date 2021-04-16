@@ -18,6 +18,7 @@
 # 4. 提取特征（均值，绝对均值，标准差，最大值，最小值
 # 5. 训练模型（决策树
 # ------------------------------ file details ------------------------------ #
+from datasets import read_sample
 from matplotlib.pyplot import subplot
 import numpy as np
 from sklearn import model_selection
@@ -36,113 +37,10 @@ from scipy import signal
 import datetime
 import math
 from sklearn.metrics import plot_confusion_matrix
+import os
+import sys
 
 #! 
-def get_scale_csi(csi_st):
-    #Pull out csi
-    csi = csi_st['csi']
-    # print(csi.shape)
-    # print(csi)
-    #Calculate the scale factor between normalized CSI and RSSI (mW)
-    csi_sq = np.multiply(csi, np.conj(csi)).real
-    csi_pwr = np.sum(csi_sq, axis=0)
-    csi_pwr = csi_pwr.reshape(1, csi_pwr.shape[0], -1)
-    rssi_pwr = dbinv(get_total_rss(csi_st))
-
-    scale = rssi_pwr / (csi_pwr / 30)
-
-    if csi_st['noise'] == -127:
-        noise_db = -92
-    else:
-        noise_db = csi_st['noise']
-    thermal_noise_pwr = dbinv(noise_db)
-
-    quant_error_pwr = scale * (csi_st['Nrx'] * csi_st['Ntx'])
-
-    total_noise_pwr = thermal_noise_pwr + quant_error_pwr
-    ret = csi * np.sqrt(scale / total_noise_pwr)
-    if csi_st['Ntx'] == 2:
-        ret = ret * math.sqrt(2)
-    elif csi_st['Ntx'] == 3:
-        ret = ret * math.sqrt(dbinv(4.5))
-    return ret
-
-def get_total_rss(csi_st):
-    # Careful here: rssis could be zero
-    rssi_mag = 0
-    if csi_st['rssi_a'] != 0:
-        rssi_mag = rssi_mag + dbinv(csi_st['rssi_a'])
-    if csi_st['rssi_b'] != 0:
-        rssi_mag = rssi_mag + dbinv(csi_st['rssi_b'])
-    if csi_st['rssi_c'] != 0:
-        rssi_mag = rssi_mag + dbinv(csi_st['rssi_c'])
-    return db(rssi_mag, 'power') - 44 - csi_st['agc']
-
-def dbinv(x):
-    return math.pow(10, x / 10)
-
-def db(X, U):
-    R = 1
-    if 'power'.startswith(U):
-        assert X >= 0
-    else:
-        X = math.pow(abs(X), 2) / R
-
-    return (10 * math.log10(X) + 300) - 300
-#!
-
-def read_sample(filepath):
-    """
-    @description  : 读取csi样本，并归一化csi
-    ---------
-    @param  : filepath：样本路径
-    -------
-    @Returns  : scale_csi：归一化csi
-    -------
-    """
-
-    # 读取样本
-    sample = np.load(filepath, allow_pickle=True)
-    # 设置csi容器，格式为样本长度（帧数）*子载波数30*发送天线3*接收天线3，复数
-    scale_csi = np.empty((len(sample),30,3,3), dtype = complex)
-    # 逐帧将csi归一化
-    for i in range(len(sample)):
-        scale_csi[i] = get_scale_csi(sample[i])
-
-    return scale_csi
-
-
-def plt_9_amplitude(scale_csi_abs, subcarries_range):
-    subplot(3,3,1)
-    for i in subcarries_range:
-        plt.plot(scale_csi_abs[:,i,0,0])
-    subplot(3,3,2)
-    for i in subcarries_range:
-        plt.plot(scale_csi_abs[:,i,0,1])
-    subplot(3,3,3)
-    for i in subcarries_range:
-        plt.plot(scale_csi_abs[:,i,0,2])
-    subplot(3,3,4)
-    for i in subcarries_range:
-        plt.plot(scale_csi_abs[:,i,1,0])
-    subplot(3,3,5)
-    for i in subcarries_range:
-        plt.plot(scale_csi_abs[:,i,1,1])
-    subplot(3,3,6)
-    for i in subcarries_range:
-        plt.plot(scale_csi_abs[:,i,1,2])
-    subplot(3,3,7)
-    for i in subcarries_range:
-        plt.plot(scale_csi_abs[:,i,2,0])
-    subplot(3,3,8)
-    for i in subcarries_range:
-        plt.plot(scale_csi_abs[:,i,2,1])
-    subplot(3,3,9)
-    for i in subcarries_range:
-        plt.plot(scale_csi_abs[:,i,2,2])
-    plt.show()
-
-
 def butterworth_lowpass(scale_csi, order, wn):
     """
     @description  : 巴特沃斯低通滤波器
@@ -240,74 +138,97 @@ if __name__ == '__main__':
     print(starttime)
     # 不用科学计数法显示
     np.set_printoptions(suppress=True)
-    #! 手势O，位置1
-    csi_O = np.empty((50,6))
-    for i in range(50):
-        # 样本路径
-        filepath = 'CSI/classroom_data_unit/DX/O/gresture_O_location_1_' + str(i) +'.npy'
-        # 读取样本
-        scale_csi = read_sample(filepath)
-        # 低通滤波
-        csi_lowpass = butterworth_lowpass(scale_csi, 7, 0.01)
-        # PCA
-        csi_pca_9 = PCA_9(csi_abs=csi_lowpass, n_components=1, whiten=False)
-        # 画幅度图
-        #plt_9_amplitude(csi_pca_9,range(1))
-        # 特征提取
-        csi_feature_9_5 = csi_feature(csi_pca_9)
-        # 只选取天线对0-0
-        csi_feature_5 = csi_feature_9_5[:,0,0,0]
-        # 添加标签
-        csi_O[i] = np.append(csi_feature_5, 0)
-        csi_O.dtype = 'float64'
-    print(datetime.datetime.now())
-    #! 手势X，位置1
-    csi_X = np.empty((50,6))
-    for i in range(50):
-        # 样本路径
-        filepath = 'CSI/classroom_data_unit/DX/X/gresture_X_location_1_' + str(i) +'.npy'
-        # 读取样本
-        scale_csi = read_sample(filepath)
-        # 低通滤波
-        csi_lowpass = butterworth_lowpass(scale_csi, 7, 0.01)
-        # PCA
-        csi_pca_9 = PCA_9(csi_abs=csi_lowpass, n_components=1, whiten=False)
-        # 画幅度图
-        #plt_9_amplitude(csi_pca_9,range(1))
-        # 特征提取
-        csi_feature_9_5 = csi_feature(csi_pca_9)
-        # 只选取天线对0-0
-        csi_feature_5 = csi_feature_9_5[:,0,0,0]
-        # 添加标签
-        csi_X[i] = np.append(csi_feature_5, 1)
-        csi_X.dtype = 'float64'
-    print(datetime.datetime.now())
-    #! 手势PO，位置1
-    csi_PO = np.empty((50,6))
-    for i in range(50):
-        # 样本路径
-        filepath = 'CSI/classroom_data_unit/DX/PO/gresture_PO_location_1_' + str(i) +'.npy'
-        # 读取样本
-        scale_csi = read_sample(filepath)
-        # 低通滤波
-        csi_lowpass = butterworth_lowpass(scale_csi, 7, 0.01)
-        # PCA
-        csi_pca_9 = PCA_9(csi_abs=csi_lowpass, n_components=1, whiten=False)
-        # 画幅度图
-        #plt_9_amplitude(csi_pca_9,range(1))
-        # 特征提取
-        csi_feature_9_5 = csi_feature(csi_pca_9)
-        # 只选取天线对0-0
-        csi_feature_5 = csi_feature_9_5[:,0,0,0]
-        # 添加标签
-        csi_PO[i] = np.append(csi_feature_5, 2)
-        csi_PO.dtype = 'float64'
 
-    print(datetime.datetime.now())
-    #! 整合所有样本，乱序，分割
-    csi_1 = np.array((csi_O, csi_X, csi_PO))
-    csi_1 = np.reshape(csi_1, (-1,6))
-    feature, label = np.split(csi_1, (5,), axis=1) #feature(150,5),label(150,1)
+    #? 缓存数据
+    path = os.path.split(os.path.abspath(__file__))[0] + '/cache/' + os.path.split(os.path.abspath(__file__))[1].split('.')[0]
+    feature_name = path + '/feature'
+    label_name = path + '/label'
+    is_feature_exists = os.path.exists(feature_name + '.npy')
+    is_label_exists = os.path.exists(label_name + '.npy')
+    if is_feature_exists and is_label_exists:
+        feature = np.load(feature_name + '.npy', allow_pickle=True)
+        label = np.load(label_name + '.npy', allow_pickle=True)
+    else:
+        isExists=os.path.exists(path)
+        if not isExists:
+            os.makedirs(path) 
+            print(path +' 创建成功')
+        else:
+            print(path +' 目录已存在')
+        #! 数据
+            #! 手势O，位置1
+        csi_O = np.empty((50,6))
+        for i in range(50):
+            # 样本路径
+            filepath = 'CSI/classroom_data_unit/DX/O/gresture_O_location_1_' + str(i) +'.npy'
+            # 读取样本
+            scale_csi = read_sample(filepath)
+            # 低通滤波
+            csi_lowpass = butterworth_lowpass(scale_csi, 7, 0.01)
+            # PCA
+            csi_pca_9 = PCA_9(csi_abs=csi_lowpass, n_components=1, whiten=False)
+            # 画幅度图
+            #plt_9_amplitude(csi_pca_9,range(1))
+            # 特征提取
+            csi_feature_9_5 = csi_feature(csi_pca_9)
+            # 只选取天线对0-0
+            csi_feature_5 = csi_feature_9_5[:,0,0,0]
+            # 添加标签
+            csi_O[i] = np.append(csi_feature_5, 0)
+            csi_O.dtype = 'float64'
+        print(datetime.datetime.now())
+        #! 手势X，位置1
+        csi_X = np.empty((50,6))
+        for i in range(50):
+            # 样本路径
+            filepath = 'CSI/classroom_data_unit/DX/X/gresture_X_location_1_' + str(i) +'.npy'
+            # 读取样本
+            scale_csi = read_sample(filepath)
+            # 低通滤波
+            csi_lowpass = butterworth_lowpass(scale_csi, 7, 0.01)
+            # PCA
+            csi_pca_9 = PCA_9(csi_abs=csi_lowpass, n_components=1, whiten=False)
+            # 画幅度图
+            #plt_9_amplitude(csi_pca_9,range(1))
+            # 特征提取
+            csi_feature_9_5 = csi_feature(csi_pca_9)
+            # 只选取天线对0-0
+            csi_feature_5 = csi_feature_9_5[:,0,0,0]
+            # 添加标签
+            csi_X[i] = np.append(csi_feature_5, 1)
+            csi_X.dtype = 'float64'
+        print(datetime.datetime.now())
+        #! 手势PO，位置1
+        csi_PO = np.empty((50,6))
+        for i in range(50):
+            # 样本路径
+            filepath = 'CSI/classroom_data_unit/DX/PO/gresture_PO_location_1_' + str(i) +'.npy'
+            # 读取样本
+            scale_csi = read_sample(filepath)
+            # 低通滤波
+            csi_lowpass = butterworth_lowpass(scale_csi, 7, 0.01)
+            # PCA
+            csi_pca_9 = PCA_9(csi_abs=csi_lowpass, n_components=1, whiten=False)
+            # 画幅度图
+            #plt_9_amplitude(csi_pca_9,range(1))
+            # 特征提取
+            csi_feature_9_5 = csi_feature(csi_pca_9)
+            # 只选取天线对0-0
+            csi_feature_5 = csi_feature_9_5[:,0,0,0]
+            # 添加标签
+            csi_PO[i] = np.append(csi_feature_5, 2)
+            csi_PO.dtype = 'float64'
+
+        print(datetime.datetime.now())
+        #! 整合所有样本，乱序，分割
+        csi_1 = np.array((csi_O, csi_X, csi_PO))
+        csi_1 = np.reshape(csi_1, (-1,6))
+        feature, label = np.split(csi_1, (5,), axis=1) #feature(150,5),label(150,1)
+        #! 保存
+        np.save(feature_name, feature)
+        np.save(label_name, label)
+
+    #?
     train_feature, test_feature, train_label, test_label = train_test_split(feature, label, random_state=1, test_size=0.3)
     #! 训练模型 决策树
     # # 建立模型
