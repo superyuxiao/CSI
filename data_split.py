@@ -8,57 +8,58 @@ from sklearn import model_selection
 import matplotlib.pyplot as plt
 import datetime
 
-# #* 记录程序运行时间，开始时间
-# starttime = datetime.datetime.now()
-# print(starttime)
-# # wendangming
-# wendangming_path = 'CSI/classroom/MYW/X/1/wendangming.txt'
-# wendangming = np.loadtxt(wendangming_path,dtype=int,delimiter='****')   
-# # 帧序号，手势序号，时间戳  
-# frame_index, gesture_index, timestamps= np.split(wendangming, (1,2), axis=1) #pylint: disable=unbalanced-tuple-unpacking
-# # print(frame_index)
-# print(datetime.datetime.now())
-# # CSI数据
-# bfee = Bfee.from_file("CSI/classroom/MYW/X/1/log.dat", model_name_encode="gb2312")
-# # print(len(bfee.dicts))
-# # print(len(bfee.all_csi))
-# # 数据分割保存
-# print(datetime.datetime.now())
-# for i in range(len(frame_index)-1):
-#     data = bfee.dicts[frame_index[i][0]:frame_index[i+1][0]]
-#     data_name ='CSI/classroom_data_unit/MYW/X/gresture_X_location_1_' + str(i)
-#     #print(data_name,data)
-#     np.save(data_name, data)
-# print(datetime.datetime.now())
-# #* 记录程序运行时间，结束时间
-# endtime = datetime.datetime.now()
-# print("程序运行时间：", endtime - starttime)
-
 #* 记录程序运行时间，开始时间
 starttime = datetime.datetime.now()
 print(starttime)
-# wendangming
-wendangming_path = 'CSI/classroom/MYW/O/1/wendangming.txt'
+# wendangming 
+wendangming_path = 'CSI/classroom/DX/RUN/wendangming.txt'
 wendangming = np.loadtxt(wendangming_path,dtype=int,delimiter='****')   
 # 帧序号，手势序号，时间戳  
 frame_index, gesture_index, timestamps= np.split(wendangming, (1,2), axis=1) #pylint: disable=unbalanced-tuple-unpacking
-print(frame_index)
+# print(frame_index)
 print(datetime.datetime.now())
 # CSI数据
-bfee = Bfee.from_file("CSI/classroom/MYW/O/1/log.dat", model_name_encode="gb2312")
+bfee = Bfee.from_file("CSI/classroom/DX/RUN/log.dat", model_name_encode="gb2312")
 # print(len(bfee.dicts))
 # print(len(bfee.all_csi))
 # 数据分割保存
 print(datetime.datetime.now())
 for i in range(len(frame_index)-1):
     data = bfee.dicts[frame_index[i][0]:frame_index[i+1][0]]
-    data_name ='CSI/classroom_data_unit/MYW/O/gresture_O_location_1_' + str(i)
+    data_name ='CSI/classroom_data_unit/DX/RUN/activity_RUN_' + str(i)
     #print(data_name,data)
     np.save(data_name, data)
 print(datetime.datetime.now())
 #* 记录程序运行时间，结束时间
 endtime = datetime.datetime.now()
 print("程序运行时间：", endtime - starttime)
+
+
+# #* 记录程序运行时间，开始时间
+# starttime = datetime.datetime.now()
+# print(starttime)
+# # wendangming
+# wendangming_path = 'CSI/classroom/MYW/O/1/wendangming.txt'
+# wendangming = np.loadtxt(wendangming_path,dtype=int,delimiter='****')   
+# # 帧序号，手势序号，时间戳  
+# frame_index, gesture_index, timestamps= np.split(wendangming, (1,2), axis=1) #pylint: disable=unbalanced-tuple-unpacking
+# print(frame_index)
+# print(datetime.datetime.now())
+# # CSI数据
+# bfee = Bfee.from_file("CSI/classroom/MYW/O/1/log.dat", model_name_encode="gb2312")
+# # print(len(bfee.dicts))
+# # print(len(bfee.all_csi))
+# # 数据分割保存
+# print(datetime.datetime.now())
+# for i in range(len(frame_index)-1):
+#     data = bfee.dicts[frame_index[i][0]:frame_index[i+1][0]]
+#     data_name ='CSI/classroom_data_unit/MYW/O/gresture_O_location_1_' + str(i)
+#     #print(data_name,data)
+#     np.save(data_name, data)
+# print(datetime.datetime.now())
+# #* 记录程序运行时间，结束时间
+# endtime = datetime.datetime.now()
+# print("程序运行时间：", endtime - starttime)
 
 # #* 记录程序运行时间，开始时间
 # starttime = datetime.datetime.now()
@@ -164,7 +165,7 @@ print("程序运行时间：", endtime - starttime)
 # endtime = datetime.datetime.now()
 # print("程序运行时间：", endtime - starttime)
 
-gresture_O_location_1_6 = np.load('CSI/classroom_data_unit/LJP/X/gresture_X_location_1_6.npy',allow_pickle=True)
+gresture_O_location_1_6 = np.load('CSI/classroom_data_unit/MYW/X/gresture_X_location_1_6.npy',allow_pickle=True)
 t = np.arange(0,len(gresture_O_location_1_6))
 csi = np.empty((len(gresture_O_location_1_6),30,3,3), dtype = complex)
 for i in range(len(gresture_O_location_1_6)):
