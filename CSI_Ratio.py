@@ -18,6 +18,7 @@
 
 from matplotlib.pyplot import plot, subplot
 import numpy as np
+from numpy.core.numeric import normalize_axis_tuple
 from sklearn import model_selection
 from sklearn.model_selection import train_test_split
 from sklearn.decomposition import PCA
@@ -31,6 +32,8 @@ from sklearn.metrics import accuracy_score
 from sklearn.metrics import classification_report
 from sklearn.metrics import plot_confusion_matrix
 from sklearn.metrics import confusion_matrix, ConfusionMatrixDisplay
+from sklearn.preprocessing import MinMaxScaler
+from sklearn.preprocessing import minmax_scale
 import matplotlib.pyplot as plt
 from scipy import signal
 from scipy import stats
@@ -257,18 +260,31 @@ def data_processing(path, label):
         filepath = path + str(i) +'.npy'
         # 读取样本
         scale_csi = read_sample(filepath)
-        # 低通滤波
-        csi_lowpass = butterworth_lowpass(scale_csi, 7, 0.01)
-        # PCA
-        csi_pca_9 = PCA_9(csi_abs=csi_lowpass, n_components=1, whiten=False)
-        # 画幅度图
-        #plt_9_amplitude(csi_pca_9,range(1))
+        #! 去除前20帧
+        scale_csi = scale_csi[20:,:,:,:]
+        # print(np.shape(scale_csi))
+        #! 截取长度800
+        if np.shape(scale_csi)[0] < 800:
+            scale_csi = scale_csi
+        else:
+            scale_csi = scale_csi[:800,:,:]
+        # print(np.shape(scale_csi))
+        #! 求csi ratio
+        csi_ratio = scale_csi[:,:,0,0]/scale_csi[:,:,0,1]
+        # print(np.shape(csi_ratio))
+        # csi ratio phase
+        csi_ratio_phase = np.unwrap(np.angle(np.transpose(csi_ratio)))
+        #! 归一化
+        # normalizer = MinMaxScaler()
+        # csi_normalize = normalizer.fit_transform(csi_ratio_phase)
+        # csi_normalize = minmax_scale(csi_ratio_phase,axis=3)
+        csi_max = np.max(csi_ratio_phase)
+        csi_min = np.min(csi_ratio_phase)
+        csi_normalize = (csi_ratio_phase-csi_min)/(csi_max - csi_min)
         # 特征提取
-        csi_feature_9_5 = csi_feature(csi_pca_9)
-        # 只选取天线对0-0
-        csi_feature_5 = csi_feature_9_5[:,0,0,0]
+        csi_feature_9_5 = csi_feature(csi_ratio_phase)
         # 添加标签
-        csi_data[i] = np.append(csi_feature_5, label)
+        csi_data[i] = np.append(csi_feature_9_5, label)
         csi_data.dtype = 'float64'
         # 返回数据
         data = csi_data
@@ -349,25 +365,47 @@ if __name__ == '__main__':
     #? 不用科学计数法显示
     np.set_printoptions(suppress=True)
     sns.set()
-    #* 读取数据
-    csi_data = np.empty((50,12))
-    filepath_RUN = 'CSI/classroom_data_unit/DX/RUN/activity_RUN_'
-    for i in range(33,44):
-        # 样本路径
-        filepath = filepath_RUN + str(i) +'.npy'
-        # 读取样本
-        scale_csi = read_sample(filepath)
-        print(np.shape(scale_csi))
-        print(np.dtype(scale_csi[0,0,0,0]))
-        # 求csi ratio
-        csi_ratio = scale_csi[:,:,0,0]/scale_csi[:,:,0,1]
-        print(np.shape(csi_ratio))
-        print(np.dtype(csi_ratio[0,0]))
-        # 绘图
-        fig = plt.figure()
-        sns_plot = sns.heatmap(np.unwrap(np.angle(np.transpose(csi_ratio))))
-        # fig.savefig("heatmap.pdf", bbox_inches='tight') # 减少边缘空白
-        plt.show()
+
+    filepath_O_1 = 'CSI/classroom_data_unit/DX/O/gresture_O_location_1_'
+    csi_DX_O_1 = data_processing(filepath_O_1, 0)
+    # #* 读取数据 CSI\CSI\classroom_data_unit\DX\O\gresture_O_location_1_0.npy
+    # filepath_RUN = 'CSI\classroom_data_unit\DX\RUN/activity_RUN_'
+    # # filepath_RUN = 'CSI\classroom_data_unit\DX\O\gresture_O_location_1_'
+    # for i in range(51):
+    #     #! 样本路径
+    #     filepath = filepath_RUN + str(i) +'.npy'
+
+    #     #! 读取样本
+    #     scale_csi = read_sample(filepath)
+    #     # print(np.shape(scale_csi))
+    #     #! 去除前20帧
+    #     scale_csi = scale_csi[20:,:,:,:]
+    #     # print(np.shape(scale_csi))
+    #     #! 截取长度800
+    #     if np.shape(scale_csi)[0] < 800:
+    #         scale_csi = scale_csi
+    #     else:
+    #         scale_csi = scale_csi[:800,:,:]
+    #     # print(np.shape(scale_csi))
+    #     #! 求csi ratio
+    #     csi_ratio = scale_csi[:,:,0,1]/scale_csi[:,:,0,2]
+    #     # print(np.shape(csi_ratio))
+    #     # csi ratio phase
+    #     csi_ratio_phase = np.unwrap(np.angle(np.transpose(csi_ratio)))
+    #     #! 归一化
+    #     # normalizer = MinMaxScaler()
+    #     # csi_normalize = normalizer.fit_transform(csi_ratio_phase)
+    #     # csi_normalize = minmax_scale(csi_ratio_phase,axis=3)
+    #     csi_max = np.max(csi_ratio_phase)
+    #     csi_min = np.min(csi_ratio_phase)
+    #     csi_normalize = (csi_ratio_phase-csi_min)/(csi_max - csi_min)
+    #     #! 绘图
+    #     fig = plt.figure()
+    #     sns_plot = sns.heatmap(csi_normalize)
+    #     plt.title("DX-RUN-0-1/2-Phase-"+str(i))
+    #     fig.savefig("E:/CSI/figure/DX-RUN-0-12-Phase-"+str(i)+".jpg", bbox_inches='tight', dpi=600) # 减少边缘空白
+    #     print(i)
+ 
         # subcarry = 19
         # subplot(3,1,1)
         # plt.plot(np.unwrap(np.angle(scale_csi[:,subcarry,0,0])))

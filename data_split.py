@@ -11,22 +11,22 @@ import datetime
 #* 记录程序运行时间，开始时间
 starttime = datetime.datetime.now()
 print(starttime)
-# wendangming 
-wendangming_path = 'CSI/classroom/DX/RUN/wendangming.txt'
+# wendangming E:\CSI\CSI\classroom\LJP\RUN\wendangming.txt
+wendangming_path = 'E:\CSI\CSI\classroom\LJP\RUN\wendangming.txt'
 wendangming = np.loadtxt(wendangming_path,dtype=int,delimiter='****')   
 # 帧序号，手势序号，时间戳  
 frame_index, gesture_index, timestamps= np.split(wendangming, (1,2), axis=1) #pylint: disable=unbalanced-tuple-unpacking
 # print(frame_index)
 print(datetime.datetime.now())
 # CSI数据
-bfee = Bfee.from_file("CSI/classroom/DX/RUN/log.dat", model_name_encode="gb2312")
+bfee = Bfee.from_file("E:\CSI\CSI\classroom\LJP\RUN\log.dat", model_name_encode="gb2312")
 # print(len(bfee.dicts))
 # print(len(bfee.all_csi))
 # 数据分割保存
 print(datetime.datetime.now())
 for i in range(len(frame_index)-1):
     data = bfee.dicts[frame_index[i][0]:frame_index[i+1][0]]
-    data_name ='CSI/classroom_data_unit/DX/RUN/activity_RUN_' + str(i)
+    data_name ='E:\CSI\CSI\classroom_data_unit\LJP\RUN/activity_RUN_' + str(i)
     #print(data_name,data)
     np.save(data_name, data)
 print(datetime.datetime.now())
@@ -34,6 +34,31 @@ print(datetime.datetime.now())
 endtime = datetime.datetime.now()
 print("程序运行时间：", endtime - starttime)
 
+#* 记录程序运行时间，开始时间
+starttime = datetime.datetime.now()
+print(starttime)
+# wendangming E:\CSI\CSI\classroom\LJP\RUN\wendangming.txt
+wendangming_path = 'E:\CSI\CSI\classroom\LZW\RUN\wendangming.txt'
+wendangming = np.loadtxt(wendangming_path,dtype=int,delimiter='****')   
+# 帧序号，手势序号，时间戳  
+frame_index, gesture_index, timestamps= np.split(wendangming, (1,2), axis=1) #pylint: disable=unbalanced-tuple-unpacking
+# print(frame_index)
+print(datetime.datetime.now())
+# CSI数据
+bfee = Bfee.from_file("E:\CSI\CSI\classroom\LZW\RUN\log.dat", model_name_encode="gb2312")
+# print(len(bfee.dicts))
+# print(len(bfee.all_csi))
+# 数据分割保存
+print(datetime.datetime.now())
+for i in range(len(frame_index)-1):
+    data = bfee.dicts[frame_index[i][0]:frame_index[i+1][0]]
+    data_name ='E:\CSI\CSI\classroom_data_unit\LZW\RUN/activity_RUN_' + str(i)
+    #print(data_name,data)
+    np.save(data_name, data)
+print(datetime.datetime.now())
+#* 记录程序运行时间，结束时间
+endtime = datetime.datetime.now()
+print("程序运行时间：", endtime - starttime)
 
 # #* 记录程序运行时间，开始时间
 # starttime = datetime.datetime.now()
