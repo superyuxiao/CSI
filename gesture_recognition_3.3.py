@@ -1,3 +1,24 @@
+#!E:\Python\Python368-64\python.exe
+# -*- encoding: utf-8 -*-
+'''
+@File    :   gesture_recognition_3.3.py
+@Time    :   2021/07/05 09:55:32
+@Author  :   Yu Xiao 于潇 
+@Version :   1.0
+@Contact :   superyuxiao@icloud.com
+@License :   (C)Copyright 2020-2021, Key Laboratory of University Wireless Communication
+                Beijing University of Posts and Telecommunications
+@Desc    :   None
+'''
+
+# ------------------------------ file details ------------------------------ #
+# 四个人，一个位置，巴特沃斯低通，PCA，九个天线对，81*9输入CNN
+# 使用pytorch重构
+# 创建自己的数据集，但是速度特别特别特别慢
+# 四个人，一个位置，巴特沃斯低通，30路子载波，一个天线对，81*30输入CNN
+# ------------------------------ file details ------------------------------ #
+
+# 加载相关库
 import os
 import random
 from numpy.lib.scimath import _fix_real_abs_gt_1
@@ -254,24 +275,21 @@ def data_processing(path, feature_number, label):
         scale_csi = read_sample(filepath)
         # 低通滤波
         csi_lowpass = butterworth_lowpass(scale_csi, 7, 0.01)
-        # PCA
-        csi_pca_9 = PCA_9(csi_abs=csi_lowpass, n_components=1, whiten=False)
-        # 画幅度图
-        #plt_9_amplitude(csi_pca_9,range(1))
+        # 不使用PCA选取子载波
         # 只选取天线对0-0
-        csi_pca = csi_pca_9[:,0,:,:]
+        csi_pca = csi_lowpass[:,:,0,0]
         # 截取长度800，步进10采样
-        csi_vector = np.zeros((81,3,3))
+        csi_vector = np.zeros((81,30))
         if np.shape(csi_pca)[0] < 810:
-            csi_empty = np.zeros((810,3,3))
-            csi_empty[:np.shape(csi_pca)[0]] = csi_pca[:,:,:]
-            csi_vector[:] = csi_empty[::10,:,:]
+            csi_empty = np.zeros((810,30))
+            csi_empty[:np.shape(csi_pca)[0]] = csi_pca[:,:]
+            csi_vector[:] = csi_empty[::10,:]
         else:
-            csi_pca = csi_pca[:809,:,:]
-            csi_vector[:] = csi_pca[::10,:,:]
+            csi_pca = csi_pca[:809,:]
+            csi_vector[:] = csi_pca[::10,:]
         # 添加标签
-        csi_vector = np.reshape(csi_vector, (81,9))
-        csi_vector = np.reshape(csi_vector, (729,))
+        csi_vector = np.reshape(csi_vector, (81,30))
+        csi_vector = np.reshape(csi_vector, (2430,))
         csi_data[i] = np.append(csi_vector, label)
         csi_data.dtype = 'float64'
         # 返回数据
@@ -283,16 +301,16 @@ def load_data(mode='train'):
 
     #! 读取数据文件
     #* 读取数据
-    feature_number = 81*3*3
+    feature_number = 81*30
     #! DX
     # 手势O，位置1
-    filepath_O_1 = 'CSI/classroom_data_unit/DX/O/gresture_O_location_1_'
+    filepath_O_1 = '../CSI/classroom_data_unit/DX/O/gresture_O_location_1_'
     csi_DX_O_1 = data_processing(filepath_O_1, feature_number, 0)
     # 手势X，位置1
-    filepath_X_1 = 'CSI/classroom_data_unit/DX/X/gresture_X_location_1_'
+    filepath_X_1 = '../CSI/classroom_data_unit/DX/X/gresture_X_location_1_'
     csi_DX_X_1 = data_processing(filepath_X_1, feature_number, 1)
     # 手势PO，位置1
-    filepath_PO_1 = 'CSI/classroom_data_unit/DX/PO/gresture_PO_location_1_'
+    filepath_PO_1 = '../CSI/classroom_data_unit/DX/PO/gresture_PO_location_1_'
     csi_DX_PO_1 = data_processing(filepath_PO_1, feature_number, 2)
     # 整合
     csi_DX_1 = np.array((csi_DX_O_1, csi_DX_X_1, csi_DX_PO_1))
@@ -300,13 +318,13 @@ def load_data(mode='train'):
     print(datetime.datetime.now())
     #! LJP
     # 手势O，位置1
-    filepath_O_1 = 'CSI/classroom_data_unit/LJP/O/gresture_O_location_1_'
+    filepath_O_1 = '../CSI/classroom_data_unit/LJP/O/gresture_O_location_1_'
     csi_LJP_O_1 = data_processing(filepath_O_1, feature_number, 0)
     # 手势X，位置1
-    filepath_X_1 = 'CSI/classroom_data_unit/LJP/X/gresture_X_location_1_'
+    filepath_X_1 = '../CSI/classroom_data_unit/LJP/X/gresture_X_location_1_'
     csi_LJP_X_1 = data_processing(filepath_X_1, feature_number, 1)
     # 手势PO，位置1
-    filepath_PO_1 = 'CSI/classroom_data_unit/LJP/PO/gresture_PO_location_1_'
+    filepath_PO_1 = '../CSI/classroom_data_unit/LJP/PO/gresture_PO_location_1_'
     csi_LJP_PO_1 = data_processing(filepath_PO_1, feature_number, 2)
     # 整合
     csi_LJP_1 = np.array((csi_LJP_O_1, csi_LJP_X_1, csi_LJP_PO_1))
@@ -314,13 +332,13 @@ def load_data(mode='train'):
     print(datetime.datetime.now())
     #! LZW
     # 手势O，位置1
-    filepath_O_1 = 'CSI/classroom_data_unit/LZW/O/gresture_O_location_1_'
+    filepath_O_1 = '../CSI/classroom_data_unit/LZW/O/gresture_O_location_1_'
     csi_LZW_O_1 = data_processing(filepath_O_1, feature_number, 0)
     # 手势X，位置1
-    filepath_X_1 = 'CSI/classroom_data_unit/LZW/X/gresture_X_location_1_'
+    filepath_X_1 = '../CSI/classroom_data_unit/LZW/X/gresture_X_location_1_'
     csi_LZW_X_1 = data_processing(filepath_X_1, feature_number, 1)
     # 手势PO，位置1
-    filepath_PO_1 = 'CSI/classroom_data_unit/LZW/PO/gresture_PO_location_1_'
+    filepath_PO_1 = '../CSI/classroom_data_unit/LZW/PO/gresture_PO_location_1_'
     csi_LZW_PO_1 = data_processing(filepath_PO_1, feature_number, 2)
     # 整合
     csi_LZW_1 = np.array((csi_LZW_O_1, csi_LZW_X_1, csi_LZW_PO_1))
@@ -329,7 +347,7 @@ def load_data(mode='train'):
     #! MYW
     # 手势O，位置1
     #? 只有手势O 
-    filepath_O_1 = 'CSI/classroom_data_unit/MYW/O/gresture_O_location_1_'
+    filepath_O_1 = '../CSI/classroom_data_unit/MYW/O/gresture_O_location_1_'
     csi_MYW_O_1 = data_processing(filepath_O_1, feature_number, 0)
     # 整合
     csi_MYW_1 = np.array((csi_MYW_O_1))
@@ -369,7 +387,7 @@ def load_data(mode='train'):
         # 按照索引读取数据 
         for i in index_list:
             # 读取图像和标签，转换其尺寸和类型
-            img = np.reshape(imgs[i], [1, 81, 9]).astype('float32')
+            img = np.reshape(imgs[i], [1, 81, 30]).astype('float32')
             label = np.reshape(labels[i], [1]).astype('int64')
             imgs_list.append(img) 
             labels_list.append(label)
@@ -401,7 +419,9 @@ class CNN(nn.Module):
          # 定义池化层，池化核的大小kernel_size为2，池化步长为2
          self.max_pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
          # 定义一层全连接层，输出维度是10
-         self.fc = nn.Linear(in_features=1440, out_features=3)
+         self.fc1 = nn.Linear(in_features=2880, out_features=96)
+         # 定义一层全连接层，输出维度是10
+         self.fc2 = nn.Linear(in_features=96, out_features=3)
          
    # 定义网络前向计算过程，卷积后紧接着使用池化层，最后使用全连接层计算最终输出
    # 卷积层激活函数使用Relu，全连接层激活函数使用softmax
@@ -412,138 +432,81 @@ class CNN(nn.Module):
          x = self.conv2(x)
          x = F.relu(x)
          x = self.max_pool2(x)
-         x = x.view([x.shape[0], 1440])
-         x = self.fc(x)
+         x = x.view([x.shape[0], 2880])
+         x = self.fc1(x)
+         x = self.fc2(x)
          x = F.softmax(x, dim=1)
          
          return x
 
 if __name__ == '__main__':
-
-    filepath = 'E:\CSI\CSI\classroom_data_unit\DX\O\gresture_O_location_1_1.npy'
-    #filepath = filepath + '1' +'.npy'
-    scale_csi = read_sample(filepath)
     
-
-# # functions to show an image
-
-# def imshow(img):
-#     img = img / 2 + 0.5     # unnormalize
-#     npimg = img.numpy()
-#     plt.imshow(np.transpose(npimg, (1, 2, 0)))
-#     plt.show()
-
-# transform = transforms.Compose(
-#     [transforms.ToTensor(),
-#      transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))])
-
-# trainset = torchvision.datasets.CIFAR10(root='./data', train=True,
-#                                         download=False, transform=transform)
-# trainloader = torch.utils.data.DataLoader(trainset, batch_size=4,
-#                                           shuffle=True, num_workers=2)
-
-# testset = torchvision.datasets.CIFAR10(root='./data', train=False,
-#                                        download=False, transform=transform)
-# testloader = torch.utils.data.DataLoader(testset, batch_size=4,
-#                                          shuffle=False, num_workers=2)
-
-# classes = ('plane', 'car', 'bird', 'cat',
-#            'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
-
-# class Net(nn.Module):
-#     def __init__(self):
-#         super(Net, self).__init__()
-#         self.conv1 = nn.Conv2d(3, 6, 5)
-#         self.pool = nn.MaxPool2d(2, 2)
-#         self.conv2 = nn.Conv2d(6, 16, 5)
-#         self.fc1 = nn.Linear(16 * 5 * 5, 120)
-#         self.fc2 = nn.Linear(120, 84)
-#         self.fc3 = nn.Linear(84, 10)
-
-#     def forward(self, x):
-#         x = self.pool(F.relu(self.conv1(x)))
-#         x = self.pool(F.relu(self.conv2(x)))
-#         x = x.view(-1, 16 * 5 * 5)
-#         x = F.relu(self.fc1(x))
-#         x = F.relu(self.fc2(x))
-#         x = self.fc3(x)
-#         return x
-
-# if __name__ == '__main__':
-
-#     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-
-#     # Assuming that we are on a CUDA machine, this should print a CUDA device:
-
-#     print(device)
-#     net = Net()
-#     net.to(device)
-
-#     criterion = nn.CrossEntropyLoss()
-#     optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
-
-#     for epoch in range(2):  # loop over the dataset multiple times
-
-#         running_loss = 0.0
-#         for i, data in enumerate(trainloader, 0):
-#             # get the inputs; data is a list of [inputs, labels]
-#             #inputs, labels = data
-#             inputs, labels = data[0].to(device), data[1].to(device)
+#仅优化算法的设置有所差别
+    model = CNN()
+    model.train()
+    params = list(model.parameters())
 
 
-#             # zero the parameter gradients
-#             optimizer.zero_grad()
+    #调用加载数据的函数
+    train_loader = load_data('train')
+    #设置不同初始学习率
+    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    # optimizer = fluid.optimizer.SGDOptimizer(learning_rate=0.001, parameter_list=model.parameters())
+    # optimizer = fluid.optimizer.SGDOptimizer(learning_rate=0.1, parameter_list=model.parameters())
+    criterion = nn.CrossEntropyLoss()
+    EPOCH_NUM = 50
+    for epoch_id in range(EPOCH_NUM):
+        for batch_id, data in enumerate(train_loader()):
+            #准备数据，变得更加简洁
+            image_data, label_data = data
+            image = torch.from_numpy(image_data)
+            label = torch.from_numpy(label_data).squeeze()
+            # 清除梯度
+            optimizer.zero_grad()
+            #前向计算的过程
+            predict = model(image)
+            #计算损失，取一个批次样本损失的平均值
+            loss = criterion(predict, label)
 
-#             # forward + backward + optimize
-#             outputs = net(inputs)
-#             loss = criterion(outputs, labels)
-#             loss.backward()
-#             optimizer.step()
+            #每训练了200批次的数据，打印下当前Loss的情况
+            if batch_id % 2 == 0:
+                print("epoch: {}, batch: {}, loss is: {}".format(epoch_id, batch_id, loss.detach().numpy()))
+            
+            #后向传播，更新参数的过程
+            loss.backward()
+            optimizer.step()
 
-#             # print statistics
-#             running_loss += loss.item()
-#             if i % 2000 == 1999:    # print every 2000 mini-batches
-#                 print('[%d, %5d] loss: %.3f' %
-#                     (epoch + 1, i + 1, running_loss / 2000))
-#                 running_loss = 0.0
+    #保存模型参数
+    PATH = './cifar_net.pth'
+    torch.save(model.state_dict(), PATH)
 
-#     print('Finished Training')
+    model = CNN()
+    model.load_state_dict(torch.load(PATH))
 
-#     PATH = './cifar_net.pth'
-#     torch.save(net.state_dict(), PATH)
+    model.eval()
+    test_loader = load_data('eval')
+    acc_set = []
+    avg_loss_set = []
+    for batch_id, data in enumerate(test_loader()):
+        images, labels = data
+        image = torch.from_numpy(images)
+        label = torch.from_numpy(labels).squeeze()
+        outputs = model(image)
+        loss = F.cross_entropy(outputs, label)
+        _, predicted = torch.max(outputs, 1)
+        acc = (predicted == label).sum().item()/50
+        acc_set.append(acc)
+        avg_loss_set.append(float(loss.detach().numpy()))
+    
+    #计算多个batch的平均损失和准确率
+    acc_val_mean = np.array(acc_set).mean()
+    avg_loss_val_mean = np.array(avg_loss_set).mean()
 
-#     net.load_state_dict(torch.load(PATH))
- 
-#     #net.to(device)
+    print('loss={}, acc={}'.format(avg_loss_val_mean, acc_val_mean))
 
-#     correct = 0
-#     total = 0
-#     with torch.no_grad():
-#         for data in testloader:
-#             # images, labels = data
-#             images, labels = data[0].to(device), data[1].to(device)
-#             outputs = net(images)
-#             _, predicted = torch.max(outputs.data, 1)
-#             total += labels.size(0)
-#             correct += (predicted == labels).sum().item()
-
-#     print('Accuracy of the network on the 10000 test images: %d %%' % (
-#         100 * correct / total))
-
-#     class_correct = list(0. for i in range(10))
-#     class_total = list(0. for i in range(10))
-#     with torch.no_grad():
-#         for data in testloader:
-#             #images, labels = data
-#             images, labels = data[0].to(device), data[1].to(device)
-#             outputs = net(images)
-#             _, predicted = torch.max(outputs, 1)
-#             c = (predicted == labels).squeeze()
-#             for i in range(4):
-#                 label = labels[i]
-#                 class_correct[label] += c[i].item()
-#                 class_total[label] += 1
-
-#     for i in range(10):
-#         print('Accuracy of %5s : %2d %%' % (
-#             classes[i], 100 * class_correct[i] / class_total[i]))
+    # 81*3*3
+    # loss=0.6554504831631979, acc=0.899999996026357
+    # loss=0.659913182258606, acc=0.8999999999999999
+    # 81*30
+    # epoch=30 loss=0.6156755884488424, acc=0.9533333333333333
+    # epoch=50 loss=0.5701029102007548, acc=0.9933333333333333
