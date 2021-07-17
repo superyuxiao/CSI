@@ -420,9 +420,10 @@ class CNN(nn.Module):
 
 if __name__ == '__main__':
 
-    filepath = 'E:\CSI\CSI\classroom_data_unit\DX\O\gresture_O_location_1_1.npy'
+    #filepath = 'E:\CSI\CSI\classroom_data_unit\DX\O\gresture_O_location_1_1.npy'
     #filepath = filepath + '1' +'.npy'
-    scale_csi = read_sample(filepath)
+    #scale_csi = read_sample(filepath)
+    print("hello")
     
 
 # # functions to show an image
