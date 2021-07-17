@@ -423,6 +423,10 @@ if __name__ == '__main__':
     #filepath = 'E:\CSI\CSI\classroom_data_unit\DX\O\gresture_O_location_1_1.npy'
     #filepath = filepath + '1' +'.npy'
     #scale_csi = read_sample(filepath)
+    filepath = '/Users/yuxiao/CSI_data/classroom_data_unit/DX/O/gresture_O_location_1_0.npy'
+    a = read_sample(filepath)
+    plt.plot(a[:, 1, 0, 0])
+    plt.show()
     print("hello")
     
 
