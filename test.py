@@ -15,6 +15,7 @@ from matplotlib.pyplot import subplot
 import numpy as np
 from sklearn import model_selection
 from sklearn.model_selection import train_test_split
+from sklearn.utils import shuffle
 from sklearn.decomposition import PCA
 from sklearn import svm
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
@@ -420,15 +421,19 @@ class CNN(nn.Module):
 
 if __name__ == '__main__':
 
-    #filepath = 'E:\CSI\CSI\classroom_data_unit\DX\O\gresture_O_location_1_1.npy'
-    #filepath = filepath + '1' +'.npy'
-    #scale_csi = read_sample(filepath)
-    filepath = '/Users/yuxiao/CSI_data/classroom_data_unit/DX/O/gresture_O_location_1_0.npy'
-    a = read_sample(filepath)
-    plt.plot(a[:, 1, 0, 0])
-    plt.show()
-    print("hello")
-    
+    # filepath = 'E:\CSI\CSI\classroom_data_unit\DX\O\gresture_O_location_1_1.npy'
+    # filepath = filepath + '1' +'.npy'
+    # scale_csi = read_sample(filepath)
+    # filepath = '/Users/yuxiao/CSI_data/classroom_data_unit/DX/O/gresture_O_location_1_0.npy'
+    # a = read_sample(filepath)
+    # plt.plot(a[:, 1, 0, 0])
+    # plt.show()
+    # print("hello")
+    a = np.array(([1, 1], [2, 2], [3, 3]))
+    b = np.array(([1], [2], [3]))
+    c, d = shuffle(a, b, random_state=1)
+    print(a, b)
+    print(c, d)
 
 # # functions to show an image
 

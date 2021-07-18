@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 '''
-@File    :   gesture_recognition_3.3.py
-@Time    :   2021/07/05 09:55:32
+@File    :   gesture_recognition_3.4.py
+@Time    :   2021/07/18 19:09:12
 @Author  :   Yu Xiao 于潇 
 @Version :   1.0
 @Contact :   superyuxiao@icloud.com
@@ -16,6 +16,7 @@
 # 创建自己的数据集，但是速度特别特别特别慢
 # 四个人，一个位置，巴特沃斯低通，30路子载波，一个天线对，81*30输入CNN。修改了网络，添加了一个全连接层。
 # （模型不收敛可能是全连接层的输入输出分配不好，也可能是学习率的问题，目前0.001）
+# 按不同人划分训练集和测试集
 # ------------------------------ file details ------------------------------ #
 
 # 加载相关库
@@ -36,6 +37,7 @@ from matplotlib.pyplot import subplot
 import numpy as np
 from sklearn import model_selection
 from sklearn.model_selection import train_test_split
+from sklearn.utils import shuffle
 from sklearn.decomposition import PCA
 from sklearn import svm
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
@@ -332,16 +334,20 @@ def load_data(mode='train', BATCHSIZE=15):
     # * 整合所有样本，乱序，分割
     # TODO 对于样本训练集和测试集的分割：每个人的比例是否一致？还是一些人训练、另一些人测试？
     # 整理数据集
-    csi_1 = np.array((csi_DX_1, csi_LJP_1, csi_LZW_1))
+    csi_1 = np.array((csi_LJP_1, csi_DX_1, csi_LZW_1))
     csi_1 = np.reshape(csi_1, (-1, feature_number + 1))
     csi_1 = np.append(csi_1, csi_MYW_1, axis=0)
     csi_1 = np.reshape(csi_1, (-1, feature_number + 1))
     # 分割特征和标签
-    feature, label = np.split(csi_1, (feature_number,),
-                              axis=1)  # feature(150,5),label(150,1) #pylint: disable=unbalanced-tuple-unpacking #防止出现一条警告
+    train_feature, train_label = np.split(csi_1, (feature_number,), axis=1)
+    test_feature, test_label = np.split(csi_LZW_1, (feature_number,), axis=1)
+    train_feature, train_label = shuffle(train_feature, train_label, random_state=1)
+    test_feature, test_label = shuffle(test_feature, test_label, random_state=1)
+    # feature, label = np.split(csi_1, (feature_number,),
+    #                           axis=1)  # feature(150,5),label(150,1) #pylint: disable=unbalanced-tuple-unpacking #防止出现一条警告
     # 划分训练集和测试集
-    train_feature, test_feature, train_label, test_label = train_test_split(feature, label, random_state=1,
-                                                                            test_size=0.3)
+    # train_feature, test_feature, train_label, test_label = train_test_split(feature, label, random_state=1,
+    #                                                                         test_size=0.3)
 
     # 根据输入mode参数决定使用训练集，验证集还是测试
     if mode == 'train':
@@ -447,17 +453,21 @@ if __name__ == '__main__':
             predict = model(image)
             # 计算损失，取一个批次样本损失的平均值
             loss = criterion(predict, label)
+            # 准确率
+            _, predicted = torch.max(predict, 1)
+            acc = (predicted == label).sum().item() / BATCHSIZE
 
             # 每训练了200批次的数据，打印下当前Loss的情况
             if batch_id % 2 == 0:
-                print("epoch: {}, batch: {}, loss is: {}".format(epoch_id, batch_id, loss.detach().numpy()))
+                print("epoch: {}, batch: {}, loss is: {}, acc is: {}".format(epoch_id, batch_id, loss.detach().numpy(),
+                                                                             acc))
 
             # 后向传播，更新参数的过程
             loss.backward()
             optimizer.step()
 
     # 保存模型参数
-    PATH = 'gesture_recognition_3-3.pth'
+    PATH = 'gesture_recognition_3-4.pth'
     torch.save(model.state_dict(), PATH)
 
     model = CNN()
@@ -493,3 +503,18 @@ if __name__ == '__main__':
     # BatchSize = 15 epoch = 50 loss=0.5590923130512238, acc=0.9933333333333334
     # BatchSize = 15 epoch = 50 loss=0.5587734162807465, acc=0.9933333333333334
     # BatchSize = 15 epoch = 50 loss=0.5524427711963653, acc=1.0
+    # 不同人划分训练集测试集
+    # DX测试，其他训练
+    # 训练集 epoch: 49, batch: 22, loss is: 0.5519987940788269, acc is: 1.0
+    # 测试集 loss=0.967512023448944, acc=0.5866666666666667
+    # LJP测试
+    # epoch: 49, batch: 16, loss is: 0.7997506260871887, acc is: 0.7333333333333333
+    # epoch: 49, batch: 18, loss is: 0.8115711212158203, acc is: 0.7333333333333333
+    # epoch: 49, batch: 20, loss is: 0.8097754120826721, acc is: 0.7333333333333333
+    # epoch: 49, batch: 22, loss is: 1.0042685270309448, acc is: 0.5333333333333333
+    # loss = 0.9660914719104767, acc = 0.6266666666666666
+    # epoch: 49, batch: 22, loss is: 0.5522249937057495, acc is: 1.0
+    # loss = 1.2215073466300965, acc = 0.33333333333333337
+    # LZW测试
+    # epoch: 49, batch: 32, loss is: 0.5514799952507019, acc is: 1.0
+    # loss = 0.5517582476139069, acc = 1.0
