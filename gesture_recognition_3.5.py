@@ -1,7 +1,7 @@
 # -*- encoding: utf-8 -*-
 '''
-@File    :   gesture_recognition_3.4.py
-@Time    :   2021/07/18 19:09:12
+@File    :   gesture_recognition_3.5.py
+@Time    :   2021/07/19 10:17:14
 @Author  :   Yu Xiao 于潇 
 @Version :   1.0
 @Contact :   superyuxiao@icloud.com
@@ -17,6 +17,7 @@
 # 四个人，一个位置，巴特沃斯低通，30路子载波，一个天线对，81*30输入CNN。修改了网络，添加了一个全连接层。
 # （模型不收敛可能是全连接层的输入输出分配不好，也可能是学习率的问题，目前0.001）
 # 按不同人划分训练集和测试集
+# 整理原始数据的读取方式
 # ------------------------------ file details ------------------------------ #
 
 # 加载相关库
@@ -204,46 +205,6 @@ def PCA_1(csi_abs, n_components, whiten):
     return data_pca
 
 
-# 不同人不同位置具有相同的数据处理过程
-# 根据不同工程，对应修改函数代码
-# def data_processing(path, feature_number, label):
-#     csi_data = np.empty((50, feature_number + 1))
-#     for i in range(50):
-#         # 样本路径
-#         filepath = path + str(i) +'.npy'
-#         # 读取样本
-#         scale_csi = read_sample(filepath)
-#         #! 去除前20帧
-#         scale_csi = scale_csi[20:,:,:,:]
-#         # print(np.shape(scale_csi))
-#         ones_csi = np.ones((800,30,3,3))
-#         ones_csi.dtype = 'float64'
-#         #! 截取长度800
-#         if np.shape(scale_csi)[0] < 800:
-#             scale_csi = ones_csi
-#         else:
-#             scale_csi = scale_csi[:800,:,:]
-#         # print(np.shape(scale_csi))
-#         #! 求csi ratio
-#         csi_ratio = scale_csi[:,:,0,0]/scale_csi[:,:,0,1]
-#         # print(np.shape(csi_ratio))
-#         # csi ratio phase
-#         csi_ratio_phase = np.unwrap(np.angle(np.transpose(csi_ratio)))
-#         #! 归一化
-#         # normalizer = MinMaxScaler()
-#         # csi_normalize = normalizer.fit_transform(csi_ratio_phase)
-#         # csi_normalize = minmax_scale(csi_ratio_phase,axis=3)
-#         csi_max = np.max(csi_ratio_phase)
-#         csi_min = np.min(csi_ratio_phase)
-#         csi_normalize = (csi_ratio_phase-csi_min)/(csi_max - csi_min)
-#         # 添加标签
-#         csi_vector = np.reshape(csi_normalize, (24000,))
-#         csi_data[i] = np.append(csi_vector, label)
-#         csi_data.dtype = 'float64'
-#         # 返回数据
-#         data = csi_data
-#     return data
-
 def data_processing(path, feature_number, label):
     csi_data = np.empty((50, feature_number + 1))
     for i in range(50):
@@ -271,12 +232,48 @@ def data_processing(path, feature_number, label):
         csi_data[i] = np.append(csi_vector, label)
         csi_data.dtype = 'float64'
         # 返回数据
+    
         data = csi_data
     return data
 
+class datatree(object):
+    def __init__(self, name, gesture, location):
+        super(datatree, self).__init__()
+
+        self.name = name
+        self.gesture = gesture
+        self.location = location
+
+    @property
+    def name(self):
+        return self._name
+
+    @property
+    def gesture(self):
+        return self._gesture
+
+    @property
+    def location(self):
+        return self._location
+
+    @name.setter
+    def name(self, name):
+        self._name = name
+
+    @gesture.setter
+    def gesture(self, gesture):
+        self._gesture = gesture
+
+    @location.setter
+    def location(self, location):
+        self._location = location
+
+    def __str__(self):
+        return '姓名%s'%self._name+',动作%s'%self._gesture+',位置%s'%self._location
+
 
 # 定义数据集读取器
-def load_data(filepath=None):
+def load_data(filepath, datatreelist ):
     # ! 读取数据文件
     # * 读取数据
     feature_number = 81 * 30
@@ -334,7 +331,7 @@ def load_data(filepath=None):
     # * 整合所有样本，乱序，分割
     # TODO 对于样本训练集和测试集的分割：每个人的比例是否一致？还是一些人训练、另一些人测试？
     # 整理数据集
-    csi_1 = np.array((csi_LJP_1, csi_DX_1, csi_LZW_1))
+    csi_1 = np.array((csi_LJP_1, csi_LZW_1))
     csi_1 = np.reshape(csi_1, (-1, feature_number + 1))
     csi_1 = np.append(csi_1, csi_MYW_1, axis=0)
     csi_1 = np.reshape(csi_1, (-1, feature_number + 1))
@@ -343,19 +340,43 @@ def load_data(filepath=None):
     # test_feature, test_label = np.split(csi_LZW_1, (feature_number,), axis=1)
     # train_feature, train_label = shuffle(train_feature, train_label, random_state=1)
     # test_feature, test_label = shuffle(test_feature, test_label, random_state=1)
-    feature, label = np.split(csi_1, (feature_number,),
-                              axis=1)  # feature(150,5),label(150,1) #pylint: disable=unbalanced-tuple-unpacking #防止出现一条警告
+    # feature, label = np.split(csi_1, (feature_number,),
+    #                           axis=1)  # feature(150,5),label(150,1) #pylint: disable=unbalanced-tuple-unpacking #防止出现一条警告
     # 划分训练集和测试集
-    train_feature, test_feature, train_label, test_label = train_test_split(feature, label, random_state=1,
-                                                                            test_size=0.3)
-    return train_feature, test_feature, train_label, test_label
+    # train_feature, test_feature, train_label, test_label = train_test_split(feature, label, random_state=1,
+    #                                                         
+    train_data = csi_1
+    test_data = csi_DX_1
 
-def load_dataset(mode='train', train_feature=None, test_feature=None, train_label=None, test_label=None, BATCHSIZE=15):
+    return train_data, test_data
+
+
+
+def load_dataset(mode='train', data=None, BATCHSIZE=15):
+    # ! 读取数据文件
+    # * 读取数据
+    feature_number = 81 * 30
+   
+    # 分割特征和标签
+    # train_feature, train_label = np.split(csi_1, (feature_number,), axis=1)
+    # test_feature, test_label = np.split(csi_LZW_1, (feature_number,), axis=1)
+    # train_feature, train_label = shuffle(train_feature, train_label, random_state=1)
+    # test_feature, test_label = shuffle(test_feature, test_label, random_state=1)
+    # feature, label = np.split(csi_1, (feature_number,),
+    #                           axis=1)  # feature(150,5),label(150,1) #pylint: disable=unbalanced-tuple-unpacking #防止出现一条警告
+    # 划分训练集和测试集
+    # train_feature, test_feature, train_label, test_label = train_test_split(feature, label, random_state=1,
+    #                                                                         test_size=0.3)
+
     # 根据输入mode参数决定使用训练集，验证集还是测试
     if mode == 'train':
+        train_feature, train_label = np.split(data, (feature_number,), axis=1)
+        train_feature, train_label = shuffle(train_feature, train_label, random_state=1)
         imgs = train_feature
         labels = train_label
     elif mode == 'test':
+        test_feature, test_label = np.split(data, (feature_number,), axis=1)
+        test_feature, test_label = shuffle(test_feature, test_label, random_state=1)
         imgs = test_feature
         labels = test_label
     # 获得所有图像的数量
@@ -392,23 +413,30 @@ def load_dataset(mode='train', train_feature=None, test_feature=None, train_labe
     return data_generator
 
 
+
 # 定义模型结构
 class CNN(nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
 
         # 定义卷积层，输出特征通道out_channels设置为20，卷积核的大小kernel_size为5，卷积步长stride=1，padding=2
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=10, kernel_size=5, stride=1, padding=5)
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=3, kernel_size=5, stride=1, padding=5)
         # 定义池化层，池化核的大小kernel_size为2，池化步长为2
         self.max_pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
         # 定义卷积层，输出特征通道out_channels设置为20，卷积核的大小kernel_size为5，卷积步长stride=1，padding=2
-        self.conv2 = nn.Conv2d(in_channels=10, out_channels=10, kernel_size=5, stride=1, padding=5)
+        self.conv2 = nn.Conv2d(in_channels=3, out_channels=3, kernel_size=5, stride=1, padding=5)
         # 定义池化层，池化核的大小kernel_size为2，池化步长为2
         self.max_pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
+        # 定义卷积层，输出特征通道out_channels设置为20，卷积核的大小kernel_size为5，卷积步长stride=1，padding=2
+        self.conv3 = nn.Conv2d(in_channels=3, out_channels=3, kernel_size=5, stride=1, padding=5)
+        # 定义池化层，池化核的大小kernel_size为2，池化步长为2
+        self.max_pool3 = nn.MaxPool2d(kernel_size=2, stride=2)
         # 定义一层全连接层，输出维度是10
-        self.fc1 = nn.Linear(in_features=2880, out_features=96)
+        self.fc1 = nn.Linear(in_features=405, out_features=81)
         # 定义一层全连接层，输出维度是10
-        self.fc2 = nn.Linear(in_features=96, out_features=3)
+        self.fc2 = nn.Linear(in_features=81, out_features=18)
+        # 定义一层全连接层，输出维度是10
+        self.fc3 = nn.Linear(in_features=18, out_features=3)
 
     # 定义网络前向计算过程，卷积后紧接着使用池化层，最后使用全连接层计算最终输出
     # 卷积层激活函数使用Relu，全连接层激活函数使用softmax
@@ -419,9 +447,15 @@ class CNN(nn.Module):
         x = self.conv2(x)
         x = F.relu(x)
         x = self.max_pool2(x)
-        x = x.view([x.shape[0], 2880])
+        x = self.conv3(x)
+        x = F.relu(x)
+        x = self.max_pool3(x)
+        x = x.view([x.shape[0], 405])
         x = self.fc1(x)
+        x = F.dropout(x, p=0.5)
         x = self.fc2(x)
+        x = F.dropout(x, p=0.5)
+        x = self.fc3(x)
         x = F.softmax(x, dim=1)
 
         return x
@@ -429,21 +463,30 @@ class CNN(nn.Module):
 
 if __name__ == '__main__':
 
+
+    
+    datatreeset = [datatree('DX', 'O', 1), datatree('DX', 'PO', 1), datatree('DX', 'X', 1),
+                    datatree('LJP', 'O', 1), datatree('LJP', 'PO', 1), datatree('LJP', 'X', 1),
+                    datatree('LZW', 'O', 1), datatree('LZW', 'PO', 1), datatree('LZW', 'X', 1),
+                    datatree('MYW', 'O', 1)]
+    # for datatree in datatreeset:
+    #     print(datatree.name,datatree.gesture)
+        
     # 仅优化算法的设置有所差别
     model = CNN()
     model.train()
     params = list(model.parameters())
 
-    BATCHSIZE = 15
+    BATCHSIZE = 20
     # 调用加载数据的函数
-    train_feature, test_feature, train_label, test_label = load_data('E:/CSI/CSI/classroom_data_unit/')
-    train_loader = load_dataset(mode='train',train_feature=train_feature,train_label= train_label, BATCHSIZE= BATCHSIZE)
+    train_data, test_data = load_data('E:/CSI/CSI/classroom_data_unit/', datatreeset)
+    train_loader = load_dataset('train', train_data, BATCHSIZE)
     # 设置不同初始学习率
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
-    # optimizer = fluid.optimizer.SGDOptimizer(learning_rate=0.001, parameter_list=model.parameters())
-    # optimizer = fluid.optimizer.SGDOptimizer(learning_rate=0.1, parameter_list=model.parameters())
+    # 损失函数
     criterion = nn.CrossEntropyLoss()
-    EPOCH_NUM = 50
+    print('train......')
+    EPOCH_NUM = 100
     for epoch_id in range(EPOCH_NUM):
         acc_set = []
         avg_loss_set = []
@@ -477,17 +520,37 @@ if __name__ == '__main__':
         avg_loss_val_mean = np.array(avg_loss_set).mean()
 
         print('epoch: {}, loss={}, acc={}'.format(epoch_id, avg_loss_val_mean, acc_val_mean))
+        
+        # model.eval()
+        # test_loader = load_dataset('test', test_data, BATCHSIZE)
+        # acc_set = []
+        # avg_loss_set = []
+        # for batch_id, data in enumerate(test_loader()):
+        #     images, labels = data
+        #     image = torch.from_numpy(images)
+        #     label = torch.from_numpy(labels).squeeze()
+        #     outputs = model(image)
+        #     loss = F.cross_entropy(outputs, label)
+        #     _, predicted = torch.max(outputs, 1)
+        #     acc = (predicted == label).sum().item() / BATCHSIZE
+        #     acc_set.append(acc)
+        #     avg_loss_set.append(float(loss.detach().numpy()))
+
+        # # 计算多个batch的平均损失和准确率
+        # acc_val_mean = np.array(acc_set).mean()
+        # avg_loss_val_mean = np.array(avg_loss_set).mean()
+
+        # print('test...., loss={}, acc={}'.format(avg_loss_val_mean, acc_val_mean))
 
     # 保存模型参数
-    PATH = 'gesture_recognition_3-4.pth'
+    PATH = 'gesture_recognition_3-4-t.pth'
     torch.save(model.state_dict(), PATH)
 
     model = CNN()
     model.load_state_dict(torch.load(PATH))
     print('test......')
     model.eval()
-    test_loader = load_dataset(mode='test', test_feature= test_feature,test_label= test_label,BATCHSIZE= BATCHSIZE)
-
+    test_loader = load_dataset('test', test_data, BATCHSIZE)
     acc_set = []
     avg_loss_set = []
     for batch_id, data in enumerate(test_loader()):
@@ -529,5 +592,5 @@ if __name__ == '__main__':
     # epoch: 49, batch: 22, loss is: 0.5522249937057495, acc is: 1.0
     # loss = 1.2215073466300965, acc = 0.33333333333333337
     # LZW测试
-    # epoch: 49, batch: 32, loss is: 0.5514799952507019, acc is: 1.0
-    # loss = 0.5517582476139069, acc = 1.0
+    # epoch: 49, batch: 22, loss is: 0.5517404675483704, acc is: 1.0
+    # loss=1.2179097414016724, acc=0.33333333333333337
