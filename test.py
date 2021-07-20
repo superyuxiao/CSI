@@ -1,5 +1,6 @@
 import os
 import random
+from numpy.core.fromnumeric import shape
 from numpy.lib.scimath import _fix_real_abs_gt_1
 import torch
 import torch.nn as nn
@@ -421,19 +422,19 @@ class CNN(nn.Module):
 
 if __name__ == '__main__':
 
-    # filepath = 'E:\CSI\CSI\classroom_data_unit\DX\O\gresture_O_location_1_1.npy'
+    filepath = 'E:\CSI\CSI\classroom_data_unit\DX\O\gresture_O_location_1_1.npy'
     # filepath = filepath + '1' +'.npy'
     # scale_csi = read_sample(filepath)
     # filepath = '/Users/yuxiao/CSI_data/classroom_data_unit/DX/O/gresture_O_location_1_0.npy'
-    # a = read_sample(filepath)
-    # plt.plot(a[:, 1, 0, 0])
-    # plt.show()
-    # print("hello")
-    a = np.array(([1, 1], [2, 2], [3, 3]))
-    b = np.array(([1], [2], [3]))
-    c, d = shuffle(a, b, random_state=1)
-    print(a, b)
-    print(c, d)
+    a = read_sample(filepath)
+    a = np.reshape(a , (a.shape[0], 30, 9))
+    b = np.mean(a, axis=2)
+    b = np.reshape(b, (b.shape[0], 30, 1))
+    c = np.array([np.correlate(b[i,j],b[i,j+1]) for i in range(b.shape[0]) for j in range(b.shape[1]-1)])
+    print(b.shape)
+    print(c.shape)
+    print("hello")
+
 
 # # functions to show an image
 

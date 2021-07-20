@@ -395,23 +395,28 @@ def load_dataset(mode='train', train_feature=None, test_feature=None, train_labe
     return data_generator
 
 
-# 定义模型结构
 class CNN(nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
 
         # 定义卷积层，输出特征通道out_channels设置为20，卷积核的大小kernel_size为5，卷积步长stride=1，padding=2
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=10, kernel_size=5, stride=1, padding=5)
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=3, kernel_size=5, stride=1, padding=5)
         # 定义池化层，池化核的大小kernel_size为2，池化步长为2
         self.max_pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
         # 定义卷积层，输出特征通道out_channels设置为20，卷积核的大小kernel_size为5，卷积步长stride=1，padding=2
-        self.conv2 = nn.Conv2d(in_channels=10, out_channels=10, kernel_size=5, stride=1, padding=5)
+        self.conv2 = nn.Conv2d(in_channels=3, out_channels=3, kernel_size=5, stride=1, padding=5)
         # 定义池化层，池化核的大小kernel_size为2，池化步长为2
         self.max_pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
+        # 定义卷积层，输出特征通道out_channels设置为20，卷积核的大小kernel_size为5，卷积步长stride=1，padding=2
+        self.conv3 = nn.Conv2d(in_channels=3, out_channels=3, kernel_size=5, stride=1, padding=5)
+        # 定义池化层，池化核的大小kernel_size为2，池化步长为2
+        self.max_pool3 = nn.MaxPool2d(kernel_size=2, stride=2)
         # 定义一层全连接层，输出维度是10
-        self.fc1 = nn.Linear(in_features=2880, out_features=96)
+        self.fc1 = nn.Linear(in_features=405, out_features=81)
         # 定义一层全连接层，输出维度是10
-        self.fc2 = nn.Linear(in_features=96, out_features=3)
+        self.fc2 = nn.Linear(in_features=81, out_features=18)
+        # 定义一层全连接层，输出维度是10
+        self.fc3 = nn.Linear(in_features=18, out_features=3)
 
     # 定义网络前向计算过程，卷积后紧接着使用池化层，最后使用全连接层计算最终输出
     # 卷积层激活函数使用Relu，全连接层激活函数使用softmax
@@ -422,9 +427,15 @@ class CNN(nn.Module):
         x = self.conv2(x)
         x = F.relu(x)
         x = self.max_pool2(x)
-        x = x.view([x.shape[0], 2880])
+        x = self.conv3(x)
+        x = F.relu(x)
+        x = self.max_pool3(x)
+        x = x.view([x.shape[0], 405])
         x = self.fc1(x)
+        x = F.dropout(x, p=0.5)
         x = self.fc2(x)
+        x = F.dropout(x, p=0.5)
+        x = self.fc3(x)
         x = F.softmax(x, dim=1)
 
         return x
@@ -446,7 +457,7 @@ if __name__ == '__main__':
     # optimizer = fluid.optimizer.SGDOptimizer(learning_rate=0.001, parameter_list=model.parameters())
     # optimizer = fluid.optimizer.SGDOptimizer(learning_rate=0.1, parameter_list=model.parameters())
     criterion = nn.CrossEntropyLoss()
-    EPOCH_NUM = 50
+    EPOCH_NUM = 100
     for epoch_id in range(EPOCH_NUM):
         acc_set = []
         avg_loss_set = []
