@@ -254,6 +254,8 @@ def data_processing(path, feature_number, label):
         filepath = path + str(i) + '.npy'
         # 读取样本
         scale_csi = read_sample(filepath)
+        # 去除直射径
+        # scale_csi[:, :, 0, 0] = scale_csi[:, :, 0, 0] - scale_csi[:, :, 1, 0]
         # 低通滤波
         csi_lowpass = butterworth_lowpass(scale_csi, 7, 0.01)
         # 不使用PCA选取子载波
@@ -450,7 +452,8 @@ if __name__ == '__main__':
 
     BATCHSIZE = 15
     # 调用加载数据的函数
-    train_feature, test_feature, train_label, test_label = load_data('E:/CSI/CSI/classroom_data_unit/')
+    # train_feature, test_feature, train_label, test_label = load_data('E:/CSI/CSI/classroom_data_unit/')
+    train_feature, test_feature, train_label, test_label = load_data('/Users/yuxiao/CSI_data/classroom_data_unit/')
     train_loader = load_dataset(mode='train',train_feature=train_feature,train_label= train_label, BATCHSIZE= BATCHSIZE)
     # 设置不同初始学习率
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
@@ -493,7 +496,7 @@ if __name__ == '__main__':
         print('epoch: {}, loss={}, acc={}'.format(epoch_id, avg_loss_val_mean, acc_val_mean))
 
     # 保存模型参数
-    PATH = 'gesture_recognition_3-4.pth'
+    PATH = 'model/gesture_recognition_3-6.pth'
     torch.save(model.state_dict(), PATH)
 
     model = CNN()
