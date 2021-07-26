@@ -1,15 +1,11 @@
-#!E:\Python\Python368-64\python.exe
-# -*- encoding: utf-8 -*-
-'''
-@File    :   gesture_recognition_3.6.py
-@Time    :   2021/07/19 17:12:38
-@Author  :   Yu Xiao 于潇 
-@Version :   1.0
-@Contact :   superyuxiao@icloud.com
-@License :   (C)Copyright 2020-2021, Key Laboratory of University Wireless Communication
-                Beijing University of Posts and Telecommunications
-@Desc    :   None
-'''
+# -*- coding: utf-8 -*-
+# @Author   : YuXiao 于潇
+# @Time     : 2021/7/26 8:34 下午
+# @File     : gesture_recognition_3.7.py
+# @Project  : CSI-Project
+# @Contact  : superyuxiao@icloud.com
+# @License  : (C)Copyright 2020-2021, Key Laboratory of University Wireless Communication
+#                Beijing University of Posts and Telecommunications
 
 # ------------------------------ file details ------------------------------ #
 # 四个人，一个位置，巴特沃斯低通，PCA，九个天线对，81*9输入CNN
@@ -20,6 +16,7 @@
 # 整理原始数据的读取方式
 # 按不同人划分训练集和测试集
 # 特征增强，相关信息提取
+# 增加动作类别
 # ------------------------------ file details ------------------------------ #
 
 # 加载相关库
@@ -143,7 +140,7 @@ def butterworth_lowpass(scale_csi, order, wn):
     """
     @description  : 巴特沃斯低通滤波器
     ---------
-    @param  : scale_csi：归一化后的csi，order：滤波器阶数，wn：归一化截至角频率 
+    @param  : scale_csi：归一化后的csi，order：滤波器阶数，wn：归一化截至角频率
     -------
     @Returns  : 低通滤波后的csi幅度
     -------
@@ -269,10 +266,13 @@ def load_data(filepath=None):
     csi_DX_O_1 = data_processing(filepath_O_1, feature_number, 0)
     # 手势X，位置1
     filepath_X_1 = filepath + 'DX/X/gresture_X_location_3_'
-    csi_DX_X_1 = data_processing(filepath_X_1, feature_number, 1)
+    csi_DX_X_1 = data_processing(filepath_X_1, feature_number, label=1)
     # 手势PO，位置1
     filepath_PO_1 = filepath + 'DX/PO/gresture_PO_location_4_'
     csi_DX_PO_1 = data_processing(filepath_PO_1, feature_number, 2)
+    # 手势SIT，位置1
+    filepath_SIT_1 = filepath + 'DX/SIT/activity_SIT_'
+    csi_DX_SIT_1 = data_processing(filepath_SIT_1, feature_number, 3)
     # 整合
     csi_DX_1 = np.array((csi_DX_O_1, csi_DX_X_1, csi_DX_PO_1))
     csi_DX_1 = np.reshape(csi_DX_1, (-1, feature_number + 1))  # ! 注意修改
@@ -287,6 +287,9 @@ def load_data(filepath=None):
     # 手势PO，位置1
     filepath_PO_1 = filepath + 'LJP/PO/gresture_PO_location_1_'
     csi_LJP_PO_1 = data_processing(filepath_PO_1, feature_number, 2)
+    # 手势SIT，位置1
+    filepath_SIT_1 = filepath + 'LJP/SIT/activity_SIT_'
+    csi_LJP_SIT_1 = data_processing(filepath_SIT_1, feature_number, 3)
     # 整合
     csi_LJP_1 = np.array((csi_LJP_O_1, csi_LJP_X_1, csi_LJP_PO_1))
     csi_LJP_1 = np.reshape(csi_LJP_1, (-1, feature_number + 1))
@@ -301,8 +304,11 @@ def load_data(filepath=None):
     # 手势PO，位置1
     filepath_PO_1 = filepath + 'LZW/PO/gresture_PO_location_5_'
     csi_LZW_PO_1 = data_processing(filepath_PO_1, feature_number, 2)
+    # 手势SIT，位置1
+    filepath_SIT_1 = filepath + 'LZW/SIT/activity_SIT_'
+    csi_LZW_SIT_1 = data_processing(filepath_SIT_1, feature_number, 3)
     # 整合
-    csi_LZW_1 = np.array((csi_LZW_O_1, csi_LZW_X_1, csi_LZW_PO_1))
+    csi_LZW_1 = np.array((csi_LZW_O_1, csi_LZW_X_1, csi_LZW_PO_1, csi_LZW_SIT_1))
     csi_LZW_1 = np.reshape(csi_LZW_1, (-1, feature_number + 1))
     print(datetime.datetime.now())
     # ! MYW
@@ -316,14 +322,14 @@ def load_data(filepath=None):
     print(datetime.datetime.now())
     # * 整合所有样本，乱序，分割
     # 整理数据集
-    csi_1 = np.array((csi_LJP_1, csi_DX_1))
+    csi_1 = np.array((csi_LJP_1))
     csi_1 = np.reshape(csi_1, (-1, feature_number + 1))
-    csi_1 = np.append(csi_1, csi_MYW_1, axis=0)
-    csi_1 = np.reshape(csi_1, (-1, feature_number + 1))
-    csi_2 = np.array((csi_LZW_1))
+    # csi_1 = np.append(csi_1, csi_MYW_1, axis=0)
+    # csi_1 = np.reshape(csi_1, (-1, feature_number + 1))
+    csi_2 = np.array((csi_LZW_1, csi_DX_1))
     csi_2 = np.reshape(csi_2, (-1, feature_number + 1))
-    # csi_2 = np.append(csi_2, csi_MYW_1, axis=0)
-    # csi_2 = np.reshape(csi_2, (-1, feature_number + 1))
+    csi_2 = np.append(csi_2, csi_MYW_1, axis=0)
+    csi_2 = np.reshape(csi_2, (-1, feature_number + 1))
     # 分割特征和标签
     train_feature, train_label = np.split(csi_1, (feature_number,), axis=1)
     test_feature, test_label = np.split(csi_2, (feature_number,), axis=1)
@@ -356,7 +362,7 @@ def load_dataset(mode='train', train_feature=None, test_feature=None, train_labe
 
         imgs_list = []
         labels_list = []
-        # 按照索引读取数据 
+        # 按照索引读取数据
         for i in index_list:
             # 读取图像和标签，转换其尺寸和类型
             img = np.reshape(imgs[i], [1, 90, 90]).astype('float32')
@@ -399,7 +405,7 @@ class CNN(nn.Module):
         # 定义一层全连接层，输出维度是10
         self.fc2 = nn.Linear(in_features=192, out_features=48)
         # 定义一层全连接层，输出维度是10
-        self.fc3 = nn.Linear(in_features=48, out_features=3)
+        self.fc3 = nn.Linear(in_features=48, out_features=4)
 
     # 定义网络前向计算过程，卷积后紧接着使用池化层，最后使用全连接层计算最终输出
     # 卷积层激活函数使用Relu，全连接层激活函数使用softmax
@@ -441,7 +447,7 @@ if __name__ == '__main__':
     # optimizer = fluid.optimizer.SGDOptimizer(learning_rate=0.001, parameter_list=model.parameters())
     # optimizer = fluid.optimizer.SGDOptimizer(learning_rate=0.1, parameter_list=model.parameters())
     criterion = nn.CrossEntropyLoss()
-    EPOCH_NUM = 50
+    EPOCH_NUM = 20
     for epoch_id in range(EPOCH_NUM):
         acc_set = []
         avg_loss_set = []
