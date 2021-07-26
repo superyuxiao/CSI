@@ -262,13 +262,13 @@ def load_data(filepath=None):
     feature_number = 90 * 90
     # ! DX
     # 手势O，位置1
-    filepath_O_1 = filepath + 'DX/O/gresture_O_location_1_'
+    filepath_O_1 = filepath + 'DX/O/gresture_O_location_5_'
     csi_DX_O_1 = data_processing(filepath_O_1, feature_number, 0)
     # 手势X，位置1
-    filepath_X_1 = filepath + 'DX/X/gresture_X_location_1_'
+    filepath_X_1 = filepath + 'DX/X/gresture_X_location_3_'
     csi_DX_X_1 = data_processing(filepath_X_1, feature_number, 1)
     # 手势PO，位置1
-    filepath_PO_1 = filepath + 'DX/PO/gresture_PO_location_1_'
+    filepath_PO_1 = filepath + 'DX/PO/gresture_PO_location_4_'
     csi_DX_PO_1 = data_processing(filepath_PO_1, feature_number, 2)
     # 整合
     csi_DX_1 = np.array((csi_DX_O_1, csi_DX_X_1, csi_DX_PO_1))
@@ -276,13 +276,13 @@ def load_data(filepath=None):
     print(datetime.datetime.now())
     # ! LJP
     # 手势O，位置1
-    filepath_O_1 = filepath + 'LJP/O/gresture_O_location_1_'
+    filepath_O_1 = filepath + 'LJP/O/gresture_O_location_2_'
     csi_LJP_O_1 = data_processing(filepath_O_1, feature_number, 0)
     # 手势X，位置1
-    filepath_X_1 = filepath + 'LJP/X/gresture_X_location_1_'
+    filepath_X_1 = filepath + 'LJP/X/gresture_X_location_2_'
     csi_LJP_X_1 = data_processing(filepath_X_1, feature_number, 1)
     # 手势PO，位置1
-    filepath_PO_1 = filepath + 'LJP/PO/gresture_PO_location_1_'
+    filepath_PO_1 = filepath + 'LJP/PO/gresture_PO_location_2_'
     csi_LJP_PO_1 = data_processing(filepath_PO_1, feature_number, 2)
     # 整合
     csi_LJP_1 = np.array((csi_LJP_O_1, csi_LJP_X_1, csi_LJP_PO_1))
@@ -290,13 +290,13 @@ def load_data(filepath=None):
     print(datetime.datetime.now())
     # ! LZW
     # 手势O，位置1
-    filepath_O_1 = filepath + 'LZW/O/gresture_O_location_1_'
+    filepath_O_1 = filepath + 'LZW/O/gresture_O_location_2_'
     csi_LZW_O_1 = data_processing(filepath_O_1, feature_number, 0)
     # 手势X，位置1
-    filepath_X_1 = filepath + 'LZW/X/gresture_X_location_1_'
+    filepath_X_1 = filepath + 'LZW/X/gresture_X_location_2_'
     csi_LZW_X_1 = data_processing(filepath_X_1, feature_number, 1)
     # 手势PO，位置1
-    filepath_PO_1 = filepath + 'LZW/PO/gresture_PO_location_1_'
+    filepath_PO_1 = filepath + 'LZW/PO/gresture_PO_location_2_'
     csi_LZW_PO_1 = data_processing(filepath_PO_1, feature_number, 2)
     # 整合
     csi_LZW_1 = np.array((csi_LZW_O_1, csi_LZW_X_1, csi_LZW_PO_1))
@@ -305,7 +305,7 @@ def load_data(filepath=None):
     # ! MYW
     # 手势O，位置1
     # ? 只有手势O
-    filepath_O_1 = filepath + 'MYW/O/gresture_O_location_1_'
+    filepath_O_1 = filepath + 'MYW/O/gresture_O_location_2_'
     csi_MYW_O_1 = data_processing(filepath_O_1, feature_number, 0)
     # 整合
     csi_MYW_1 = np.array((csi_MYW_O_1))
@@ -432,71 +432,71 @@ if __name__ == '__main__':
     # 调用加载数据的函数
     # train_feature, test_feature, train_label, test_label = load_data('E:/CSI/CSI/classroom_data_unit/')
     train_feature, test_feature, train_label, test_label = load_data('/Users/yuxiao/CSI_data/classroom_data_unit/')
-    train_loader = load_dataset(mode='train',train_feature=train_feature,train_label= train_label, BATCHSIZE= BATCHSIZE)
-    # 设置不同初始学习率
-    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
-    # optimizer = fluid.optimizer.SGDOptimizer(learning_rate=0.001, parameter_list=model.parameters())
-    # optimizer = fluid.optimizer.SGDOptimizer(learning_rate=0.1, parameter_list=model.parameters())
-    criterion = nn.CrossEntropyLoss()
-    EPOCH_NUM = 20
-    for epoch_id in range(EPOCH_NUM):
-        acc_set = []
-        avg_loss_set = []
-        for batch_id, data in enumerate(train_loader()):
-            # 准备数据，变得更加简洁
-            image_data, label_data = data
-            image = torch.from_numpy(image_data)
-            label = torch.from_numpy(label_data).squeeze()
-            # 清除梯度
-            optimizer.zero_grad()
-            # 前向计算的过程
-            predict = model(image)
-            # 计算损失，取一个批次样本损失的平均值
-            loss = criterion(predict, label)
-            # 准确率
-            _, predicted = torch.max(predict, 1)
-            acc = (predicted == label).sum().item() / BATCHSIZE
-            acc_set.append(acc)
-            avg_loss_set.append(float(loss.detach().numpy()))
-
-            # # 每训练了200批次的数据，打印下当前Loss的情况
-            # if batch_id % 2 == 0:
-            #     print("epoch: {}, batch: {}, loss is: {}, acc is: {}".format(epoch_id, batch_id, loss.detach().numpy(),
-            #                                                                  acc))
-
-            # 后向传播，更新参数的过程
-            loss.backward()
-            optimizer.step()
-        # 计算多个batch的平均损失和准确率
-        acc_val_mean = np.array(acc_set).mean()
-        avg_loss_val_mean = np.array(avg_loss_set).mean()
-
-        print('epoch: {}, loss={}, acc={}'.format(epoch_id, avg_loss_val_mean, acc_val_mean))
-
-        model.eval()
-        test_loader = load_dataset(mode='test', test_feature= test_feature,test_label= test_label,BATCHSIZE= BATCHSIZE)
-        acc_set = []
-        avg_loss_set = []
-        for batch_id, data in enumerate(test_loader()):
-            images, labels = data
-            image = torch.from_numpy(images)
-            label = torch.from_numpy(labels).squeeze()
-            outputs = model(image)
-            loss = F.cross_entropy(outputs, label)
-            _, predicted = torch.max(outputs, 1)
-            acc = (predicted == label).sum().item() / BATCHSIZE
-            acc_set.append(acc)
-            avg_loss_set.append(float(loss.detach().numpy()))
-
-        # 计算多个batch的平均损失和准确率
-        acc_val_mean = np.array(acc_set).mean()
-        avg_loss_val_mean = np.array(avg_loss_set).mean()
-
-        print('test...., loss={}, acc={}'.format(avg_loss_val_mean, acc_val_mean))
+    # train_loader = load_dataset(mode='train',train_feature=train_feature,train_label= train_label, BATCHSIZE= BATCHSIZE)
+    # # 设置不同初始学习率
+    # optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
+    # # optimizer = fluid.optimizer.SGDOptimizer(learning_rate=0.001, parameter_list=model.parameters())
+    # # optimizer = fluid.optimizer.SGDOptimizer(learning_rate=0.1, parameter_list=model.parameters())
+    # criterion = nn.CrossEntropyLoss()
+    # EPOCH_NUM = 20
+    # for epoch_id in range(EPOCH_NUM):
+    #     acc_set = []
+    #     avg_loss_set = []
+    #     for batch_id, data in enumerate(train_loader()):
+    #         # 准备数据，变得更加简洁
+    #         image_data, label_data = data
+    #         image = torch.from_numpy(image_data)
+    #         label = torch.from_numpy(label_data).squeeze()
+    #         # 清除梯度
+    #         optimizer.zero_grad()
+    #         # 前向计算的过程
+    #         predict = model(image)
+    #         # 计算损失，取一个批次样本损失的平均值
+    #         loss = criterion(predict, label)
+    #         # 准确率
+    #         _, predicted = torch.max(predict, 1)
+    #         acc = (predicted == label).sum().item() / BATCHSIZE
+    #         acc_set.append(acc)
+    #         avg_loss_set.append(float(loss.detach().numpy()))
+    #
+    #         # # 每训练了200批次的数据，打印下当前Loss的情况
+    #         # if batch_id % 2 == 0:
+    #         #     print("epoch: {}, batch: {}, loss is: {}, acc is: {}".format(epoch_id, batch_id, loss.detach().numpy(),
+    #         #                                                                  acc))
+    #
+    #         # 后向传播，更新参数的过程
+    #         loss.backward()
+    #         optimizer.step()
+    #     # 计算多个batch的平均损失和准确率
+    #     acc_val_mean = np.array(acc_set).mean()
+    #     avg_loss_val_mean = np.array(avg_loss_set).mean()
+    #
+    #     print('epoch: {}, loss={}, acc={}'.format(epoch_id, avg_loss_val_mean, acc_val_mean))
+    #
+    #     model.eval()
+    #     test_loader = load_dataset(mode='test', test_feature= test_feature,test_label= test_label,BATCHSIZE= BATCHSIZE)
+    #     acc_set = []
+    #     avg_loss_set = []
+    #     for batch_id, data in enumerate(test_loader()):
+    #         images, labels = data
+    #         image = torch.from_numpy(images)
+    #         label = torch.from_numpy(labels).squeeze()
+    #         outputs = model(image)
+    #         loss = F.cross_entropy(outputs, label)
+    #         _, predicted = torch.max(outputs, 1)
+    #         acc = (predicted == label).sum().item() / BATCHSIZE
+    #         acc_set.append(acc)
+    #         avg_loss_set.append(float(loss.detach().numpy()))
+    #
+    #     # 计算多个batch的平均损失和准确率
+    #     acc_val_mean = np.array(acc_set).mean()
+    #     avg_loss_val_mean = np.array(avg_loss_set).mean()
+    #
+    #     print('test...., loss={}, acc={}'.format(avg_loss_val_mean, acc_val_mean))
 
     # 保存模型参数
     PATH = 'model/gesture_recognition_3-6.pth'
-    torch.save(model.state_dict(), PATH)
+    # torch.save(model.state_dict(), PATH)
 
     model = CNN()
     model.load_state_dict(torch.load(PATH))
