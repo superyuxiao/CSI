@@ -19,7 +19,7 @@
 # （模型不收敛可能是全连接层的输入输出分配不好，也可能是学习率的问题，目前0.001）
 # 整理原始数据的读取方式
 # 按不同人划分训练集和测试集
-# 一次学习(one-shot learning)
+# 特征增强，相关信息提取
 # ------------------------------ file details ------------------------------ #
 
 # 加载相关库
@@ -207,84 +207,59 @@ def PCA_1(csi_abs, n_components, whiten):
     return data_pca
 
 
-# 不同人不同位置具有相同的数据处理过程
-# 根据不同工程，对应修改函数代码
-# def data_processing(path, feature_number, label):
-#     csi_data = np.empty((50, feature_number + 1))
-#     for i in range(50):
-#         # 样本路径
-#         filepath = path + str(i) +'.npy'
-#         # 读取样本
-#         scale_csi = read_sample(filepath)
-#         #! 去除前20帧
-#         scale_csi = scale_csi[20:,:,:,:]
-#         # print(np.shape(scale_csi))
-#         ones_csi = np.ones((800,30,3,3))
-#         ones_csi.dtype = 'float64'
-#         #! 截取长度800
-#         if np.shape(scale_csi)[0] < 800:
-#             scale_csi = ones_csi
-#         else:
-#             scale_csi = scale_csi[:800,:,:]
-#         # print(np.shape(scale_csi))
-#         #! 求csi ratio
-#         csi_ratio = scale_csi[:,:,0,0]/scale_csi[:,:,0,1]
-#         # print(np.shape(csi_ratio))
-#         # csi ratio phase
-#         csi_ratio_phase = np.unwrap(np.angle(np.transpose(csi_ratio)))
-#         #! 归一化
-#         # normalizer = MinMaxScaler()
-#         # csi_normalize = normalizer.fit_transform(csi_ratio_phase)
-#         # csi_normalize = minmax_scale(csi_ratio_phase,axis=3)
-#         csi_max = np.max(csi_ratio_phase)
-#         csi_min = np.min(csi_ratio_phase)
-#         csi_normalize = (csi_ratio_phase-csi_min)/(csi_max - csi_min)
-#         # 添加标签
-#         csi_vector = np.reshape(csi_normalize, (24000,))
-#         csi_data[i] = np.append(csi_vector, label)
-#         csi_data.dtype = 'float64'
-#         # 返回数据
-#         data = csi_data
-#     return data
-
 def data_processing(path, feature_number, label):
-    csi_data = np.empty((50, feature_number + 1))
+    Den_set = np.zeros([50, feature_number + 1])
     for i in range(50):
         # 样本路径
         filepath = path + str(i) + '.npy'
         # 读取样本
         scale_csi = read_sample(filepath)
-        # 去除直射径
-        # scale_csi[:, :, 0, 0] = scale_csi[:, :, 0, 0] - scale_csi[:, :, 1, 0]
-        # 低通滤波
-        csi_lowpass = butterworth_lowpass(scale_csi, 7, 0.01)
-        # 不使用PCA选取子载波
-        # 只选取天线对0-0
-        csi_pca = csi_lowpass[:, :, 0, 0]
-        # 截取长度800，步进10采样
-        csi_vector = np.zeros((81, 30))
-        if np.shape(csi_pca)[0] < 810:
-            csi_empty = np.zeros((810, 30))
-            csi_empty[:np.shape(csi_pca)[0]] = csi_pca[:, :]
-            csi_vector[:] = csi_empty[::10, :]
-        else:
-            csi_pca = csi_pca[:809, :]
-            csi_vector[:] = csi_pca[::10, :]
-        # 添加标签
-        csi_vector = np.reshape(csi_vector, (81, 30))
-        csi_vector = np.reshape(csi_vector, (2430,))
-        csi_data[i] = np.append(csi_vector, label)
-        csi_data.dtype = 'float64'
-        # 返回数据
-        data = csi_data
-    return data
+        # 取1*3天线对
+        raw_csi = scale_csi[:, :, 0, :]
+        raw_csi = np.reshape(raw_csi, [raw_csi.shape[0], 30, 1, 3])
+        # print(raw_csi.shape)
+        st_csi = np.zeros_like(raw_csi)
+        # 遗忘因子
+        theta = 0.7
+        for i in range(1, raw_csi.shape[0]):
+            st_csi[i, :, :, :] = theta * raw_csi[i, :, :, :] + (1 - theta) * st_csi[i - 1, :, :, :]
+        dy_csi = raw_csi - st_csi
+        # 整理shape
+        abs_dy_csi = abs(dy_csi)
+        abs_dy_csi = np.reshape(abs_dy_csi, [abs_dy_csi.shape[0], 30, 3])
+        abs_dy_csi = np.reshape(abs_dy_csi, [abs_dy_csi.shape[0], 90])
+        # print(abs_dy_csi.shape)
+        # 分段
+        k = 2
+        split_index = [i for i in range(int(abs_dy_csi.shape[0] / k), abs_dy_csi.shape[0], int(abs_dy_csi.shape[0] / k))]
+        segment_dy_csi = np.split(abs_dy_csi, split_index, axis=0)
+        if np.shape(segment_dy_csi[0]) != np.shape(segment_dy_csi[-1]):
+            segment_dy_csi = segment_dy_csi[:-1]  # 去除最后一个， 保证各片段等长度
+        # 相关计算
+        cross_segment = []
+        for i in range(len(segment_dy_csi)):
+            for j in range(i, len(segment_dy_csi)):
+                t = np.mean(segment_dy_csi[i])
+                u1 = segment_dy_csi[i] - np.mean(segment_dy_csi[i])
+                u2 = segment_dy_csi[j] - np.mean(segment_dy_csi[j])
+                mul = np.matmul(np.transpose(u1), u2)
+                cross_segment.append(mul)
+        cross_segment = np.array(cross_segment)
+        cross_segment = np.reshape(cross_segment, [cross_segment.shape[1], -1])
+        # 缩小尺寸
+        Den = np.matmul(cross_segment, np.transpose(cross_segment))
+        Den = np.reshape(Den, [-1, ])
+        Den = np.append(Den, label)
+        Den_set[i] = Den
+
+    return Den_set
 
 
 # 定义数据集读取器
 def load_data(filepath=None):
     # ! 读取数据文件
     # * 读取数据
-    feature_number = 81 * 30
+    feature_number = 90 * 90
     # ! DX
     # 手势O，位置1
     filepath_O_1 = filepath + 'DX/O/gresture_O_location_1_'
@@ -337,22 +312,25 @@ def load_data(filepath=None):
     csi_MYW_1 = np.reshape(csi_MYW_1, (-1, feature_number + 1))
     print(datetime.datetime.now())
     # * 整合所有样本，乱序，分割
-    # TODO 对于样本训练集和测试集的分割：每个人的比例是否一致？还是一些人训练、另一些人测试？
     # 整理数据集
-    csi_1 = np.array((csi_LJP_1, csi_DX_1, csi_LZW_1))
+    csi_1 = np.array((csi_LJP_1))
     csi_1 = np.reshape(csi_1, (-1, feature_number + 1))
-    csi_1 = np.append(csi_1, csi_MYW_1, axis=0)
-    csi_1 = np.reshape(csi_1, (-1, feature_number + 1))
+    # csi_1 = np.append(csi_1, csi_MYW_1, axis=0)
+    # csi_1 = np.reshape(csi_1, (-1, feature_number + 1))
+    csi_2 = np.array((csi_LZW_1, csi_DX_1))
+    csi_2 = np.reshape(csi_2, (-1, feature_number + 1))
+    csi_2 = np.append(csi_2, csi_MYW_1, axis=0)
+    csi_2 = np.reshape(csi_2, (-1, feature_number + 1))
     # 分割特征和标签
-    # train_feature, train_label = np.split(csi_1, (feature_number,), axis=1)
-    # test_feature, test_label = np.split(csi_LZW_1, (feature_number,), axis=1)
-    # train_feature, train_label = shuffle(train_feature, train_label, random_state=1)
-    # test_feature, test_label = shuffle(test_feature, test_label, random_state=1)
-    feature, label = np.split(csi_1, (feature_number,),
-                              axis=1)  # feature(150,5),label(150,1) #pylint: disable=unbalanced-tuple-unpacking #防止出现一条警告
-    # 划分训练集和测试集
-    train_feature, test_feature, train_label, test_label = train_test_split(feature, label, random_state=1,
-                                                                            test_size=0.3)
+    train_feature, train_label = np.split(csi_1, (feature_number,), axis=1)
+    test_feature, test_label = np.split(csi_2, (feature_number,), axis=1)
+    train_feature, train_label = shuffle(train_feature, train_label, random_state=1)
+    test_feature, test_label = shuffle(test_feature, test_label, random_state=1)
+    # feature, label = np.split(csi_1, (feature_number,),
+    #                           axis=1)  # feature(150,5),label(150,1) #pylint: disable=unbalanced-tuple-unpacking #防止出现一条警告
+    # # 划分训练集和测试集
+    # train_feature, test_feature, train_label, test_label = train_test_split(feature, label, random_state=1,
+    #                                                                         test_size=0.3)
     return train_feature, test_feature, train_label, test_label
 
 def load_dataset(mode='train', train_feature=None, test_feature=None, train_label=None, test_label=None, BATCHSIZE=15):
@@ -378,7 +356,7 @@ def load_dataset(mode='train', train_feature=None, test_feature=None, train_labe
         # 按照索引读取数据 
         for i in index_list:
             # 读取图像和标签，转换其尺寸和类型
-            img = np.reshape(imgs[i], [1, 81, 30]).astype('float32')
+            img = np.reshape(imgs[i], [1, 90, 90]).astype('float32')
             label = np.reshape(labels[i], [1]).astype('int64')
             imgs_list.append(img)
             labels_list.append(label)
@@ -414,11 +392,11 @@ class CNN(nn.Module):
         # 定义池化层，池化核的大小kernel_size为2，池化步长为2
         self.max_pool3 = nn.MaxPool2d(kernel_size=2, stride=2)
         # 定义一层全连接层，输出维度是10
-        self.fc1 = nn.Linear(in_features=405, out_features=81)
+        self.fc1 = nn.Linear(in_features=768, out_features=192)
         # 定义一层全连接层，输出维度是10
-        self.fc2 = nn.Linear(in_features=81, out_features=18)
+        self.fc2 = nn.Linear(in_features=192, out_features=48)
         # 定义一层全连接层，输出维度是10
-        self.fc3 = nn.Linear(in_features=18, out_features=3)
+        self.fc3 = nn.Linear(in_features=48, out_features=3)
 
     # 定义网络前向计算过程，卷积后紧接着使用池化层，最后使用全连接层计算最终输出
     # 卷积层激活函数使用Relu，全连接层激活函数使用softmax
@@ -432,7 +410,7 @@ class CNN(nn.Module):
         x = self.conv3(x)
         x = F.relu(x)
         x = self.max_pool3(x)
-        x = x.view([x.shape[0], 405])
+        x = x.view([x.shape[0], 768])
         x = self.fc1(x)
         x = F.dropout(x, p=0.5)
         x = self.fc2(x)
@@ -460,7 +438,7 @@ if __name__ == '__main__':
     # optimizer = fluid.optimizer.SGDOptimizer(learning_rate=0.001, parameter_list=model.parameters())
     # optimizer = fluid.optimizer.SGDOptimizer(learning_rate=0.1, parameter_list=model.parameters())
     criterion = nn.CrossEntropyLoss()
-    EPOCH_NUM = 100
+    EPOCH_NUM = 20
     for epoch_id in range(EPOCH_NUM):
         acc_set = []
         avg_loss_set = []
@@ -494,6 +472,27 @@ if __name__ == '__main__':
         avg_loss_val_mean = np.array(avg_loss_set).mean()
 
         print('epoch: {}, loss={}, acc={}'.format(epoch_id, avg_loss_val_mean, acc_val_mean))
+
+        model.eval()
+        test_loader = load_dataset(mode='test', test_feature= test_feature,test_label= test_label,BATCHSIZE= BATCHSIZE)
+        acc_set = []
+        avg_loss_set = []
+        for batch_id, data in enumerate(test_loader()):
+            images, labels = data
+            image = torch.from_numpy(images)
+            label = torch.from_numpy(labels).squeeze()
+            outputs = model(image)
+            loss = F.cross_entropy(outputs, label)
+            _, predicted = torch.max(outputs, 1)
+            acc = (predicted == label).sum().item() / BATCHSIZE
+            acc_set.append(acc)
+            avg_loss_set.append(float(loss.detach().numpy()))
+
+        # 计算多个batch的平均损失和准确率
+        acc_val_mean = np.array(acc_set).mean()
+        avg_loss_val_mean = np.array(avg_loss_set).mean()
+
+        print('test...., loss={}, acc={}'.format(avg_loss_val_mean, acc_val_mean))
 
     # 保存模型参数
     PATH = 'model/gesture_recognition_3-6.pth'
@@ -545,6 +544,14 @@ if __name__ == '__main__':
     # loss = 0.9660914719104767, acc = 0.6266666666666666
     # epoch: 49, batch: 22, loss is: 0.5522249937057495, acc is: 1.0
     # loss = 1.2215073466300965, acc = 0.33333333333333337
+
+    # 修改预处理方法后
+    # LJP测试
+    # epoch: 49, loss = 0.56305659810702, acc = 0.9611111111111112
+    # loss = 0.5654346227645874, acc = 0.9866666666666667
+    # DX测试
+    # epoch: 19, loss = 0.569031742711862, acc = 0.9611111111111112
+    # loss = 0.5699916005134582, acc = 0.9866666666666667
     # LZW测试
-    # epoch: 49, batch: 32, loss is: 0.5514799952507019, acc is: 1.0
-    # loss = 0.5517582476139069, acc = 1.0
+    # epoch: 19, loss=0.5698578630884489, acc=0.9611111111111112
+    # loss=0.5705591678619385, acc=0.9866666666666667
