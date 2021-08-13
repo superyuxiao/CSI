@@ -211,7 +211,7 @@ def data_processing(path, feature_number, label):
     Den_set = np.zeros([50, feature_number + 1])
     for i in range(50):
         # 样本路径
-        filepath = path + str(i) + '.npy'
+        filepath = path + str(i + 1) + '.npy'
         # 读取样本
         scale_csi = read_sample(filepath)
         # 取1*3天线对
@@ -220,7 +220,11 @@ def data_processing(path, feature_number, label):
         # print(raw_csi.shape)
         st_csi = np.zeros_like(raw_csi)
         # 遗忘因子
-        theta = 0.7
+        theta = 0.1
+        # theta = 0.5 acc = 0.96
+        # theta = 0.4 acc = 0.9733
+        # theta = 0.1 acc = 0.9933
+        # theta = 0.05 acc = 0.9933
         for j in range(1, raw_csi.shape[0]):
             st_csi[j, :, :, :] = theta * raw_csi[j, :, :, :] + (1 - theta) * st_csi[j - 1, :, :, :]
         dy_csi = raw_csi - st_csi
@@ -230,7 +234,7 @@ def data_processing(path, feature_number, label):
         abs_dy_csi = np.reshape(abs_dy_csi, [abs_dy_csi.shape[0], 90])
         # print(abs_dy_csi.shape)
         # 分段
-        k = 3
+        k = 2
         split_index = [i for i in range(int(abs_dy_csi.shape[0] / k), abs_dy_csi.shape[0], int(abs_dy_csi.shape[0] / k))]
         segment_dy_csi = np.split(abs_dy_csi, split_index, axis=0)
         if np.shape(segment_dy_csi[0]) != np.shape(segment_dy_csi[-1]):
@@ -239,7 +243,7 @@ def data_processing(path, feature_number, label):
         cross_segment = []
         for m in range(len(segment_dy_csi)):
             for n in range(m, len(segment_dy_csi)):
-                t = np.mean(segment_dy_csi[m])
+                # t = np.mean(segment_dy_csi[m])
                 u1 = segment_dy_csi[m] - np.mean(segment_dy_csi[m])
                 u2 = segment_dy_csi[n] - np.mean(segment_dy_csi[n])
                 mul = np.matmul(np.transpose(u1), u2)
@@ -249,11 +253,9 @@ def data_processing(path, feature_number, label):
         # 缩小尺寸
         Den = np.matmul(cross_segment, np.transpose(cross_segment))
         Den = np.reshape(Den, [-1, ])
+        Den = Den / 10000000000
         Den = np.append(Den, label)
-        a = Den[8100]
         Den_set[i] = Den
-
-    b = np.max(Den_set)
 
     return Den_set
 
@@ -265,13 +267,13 @@ def load_data(filepath=None):
     feature_number = 90 * 90
     # ! DX
     # 手势O，位置1
-    filepath_O_1 = filepath + 'DX/O/gresture_O_location_5_'
+    filepath_O_1 = filepath + 'DX/O/gresture_O_location_1_'
     csi_DX_O_1 = data_processing(filepath_O_1, feature_number, 0)
     # 手势X，位置1
-    filepath_X_1 = filepath + 'DX/X/gresture_X_location_3_'
+    filepath_X_1 = filepath + 'DX/X/gresture_X_location_1_'
     csi_DX_X_1 = data_processing(filepath_X_1, feature_number, 1)
     # 手势PO，位置1
-    filepath_PO_1 = filepath + 'DX/PO/gresture_PO_location_4_'
+    filepath_PO_1 = filepath + 'DX/PO/gresture_PO_location_1_'
     csi_DX_PO_1 = data_processing(filepath_PO_1, feature_number, 2)
     # 整合
     csi_DX_1 = np.array((csi_DX_O_1, csi_DX_X_1, csi_DX_PO_1))
@@ -293,13 +295,13 @@ def load_data(filepath=None):
     print(datetime.datetime.now())
     # ! LZW
     # 手势O，位置1
-    filepath_O_1 = filepath + 'LZW/O/gresture_O_location_2_'
+    filepath_O_1 = filepath + 'LZW/O/gresture_O_location_1_'
     csi_LZW_O_1 = data_processing(filepath_O_1, feature_number, 0)
     # 手势X，位置1
-    filepath_X_1 = filepath + 'LZW/X/gresture_X_location_3_'
+    filepath_X_1 = filepath + 'LZW/X/gresture_X_location_1_'
     csi_LZW_X_1 = data_processing(filepath_X_1, feature_number, 1)
     # 手势PO，位置1
-    filepath_PO_1 = filepath + 'LZW/PO/gresture_PO_location_5_'
+    filepath_PO_1 = filepath + 'LZW/PO/gresture_PO_location_1_'
     csi_LZW_PO_1 = data_processing(filepath_PO_1, feature_number, 2)
     # 整合
     csi_LZW_1 = np.array((csi_LZW_O_1, csi_LZW_X_1, csi_LZW_PO_1))
@@ -308,7 +310,7 @@ def load_data(filepath=None):
     # ! MYW
     # 手势O，位置1
     # ? 只有手势O
-    filepath_O_1 = filepath + 'MYW/O/gresture_O_location_4_'
+    filepath_O_1 = filepath + 'MYW/O/gresture_O_location_1_'
     csi_MYW_O_1 = data_processing(filepath_O_1, feature_number, 0)
     # 整合
     csi_MYW_1 = np.array((csi_MYW_O_1))
@@ -316,11 +318,11 @@ def load_data(filepath=None):
     print(datetime.datetime.now())
     # * 整合所有样本，乱序，分割
     # 整理数据集
-    csi_1 = np.array((csi_LJP_1, csi_DX_1))
+    csi_1 = np.array((csi_LJP_1, csi_LZW_1))
     csi_1 = np.reshape(csi_1, (-1, feature_number + 1))
     csi_1 = np.append(csi_1, csi_MYW_1, axis=0)
     csi_1 = np.reshape(csi_1, (-1, feature_number + 1))
-    csi_2 = np.array((csi_LZW_1))
+    csi_2 = np.array((csi_DX_1))
     csi_2 = np.reshape(csi_2, (-1, feature_number + 1))
     # csi_2 = np.append(csi_2, csi_MYW_1, axis=0)
     # csi_2 = np.reshape(csi_2, (-1, feature_number + 1))
@@ -466,7 +468,6 @@ if __name__ == '__main__':
             # if batch_id % 2 == 0:
             #     print("epoch: {}, batch: {}, loss is: {}, acc is: {}".format(epoch_id, batch_id, loss.detach().numpy(),
             #                                                                  acc))
-
             # 后向传播，更新参数的过程
             loss.backward()
             optimizer.step()

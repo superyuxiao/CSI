@@ -40,7 +40,6 @@ for i in range(25,30):
     plt.plot(t, abs(subcarrier)) # *幅度
     #plt.plot(np.arctan(subcarrier.imag/subcarrier.real)/1.5707963) # *相位 
 
-# todo 散点色阶图
 """ for i in range(25,30):
     # !天线对可选，默认0-0
     subcarrier = csi[:,i,0,0]

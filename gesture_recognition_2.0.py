@@ -210,7 +210,6 @@ def get_feature_label():
     csi_MYW_1 = np.reshape(csi_MYW_1, (-1,6))
     print(datetime.datetime.now())
     #* 整合所有样本，乱序，分割
-    # TODO 对于样本训练集和测试集的分割：每个人的比例是否一致？还是一些人训练、另一些人测试？
     # 整理数据集
     csi_1 = np.array((csi_DX_1, csi_LJP_1, csi_LZW_1))
     csi_1 = np.reshape(csi_1, (-1,6))
