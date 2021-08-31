@@ -456,7 +456,7 @@ if __name__ == '__main__':
             optimizer.step()
 
     # 保存模型参数
-    PATH = 'model/gesture_recognition_3-3.pth'
+    PATH = '../model/gesture_recognition_3-3.pth'
     torch.save(model.state_dict(), PATH)
 
     model = CNN()

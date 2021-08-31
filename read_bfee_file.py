@@ -1,6 +1,5 @@
-import numpy as np
 from Bfee import Bfee
-from get_scale_csi import get_scale_csi
+from CSI.gesture_recognition.get_scale_csi import get_scale_csi
 
 if __name__ == '__main__':
     filename = 'E:/project/CSI/classroom/DX/O/1/log.dat'

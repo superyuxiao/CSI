@@ -231,7 +231,7 @@ if __name__ == '__main__':
         print('epoch: {}, loss={}, acc={}'.format(epoch_id, avg_loss_val_mean, acc_val_mean))
 
     # 保存模型参数
-    PATH = 'model/gesture_recognition_3-4.pth'
+    PATH = '../model/gesture_recognition_3-4.pth'
     torch.save(model.state_dict(), PATH)
 
     model = CNN()

@@ -272,7 +272,7 @@ class CNN(nn.Module):
 
 if __name__ == '__main__':
 
-    print(os.path.abspath('.'))
+    print(os.path.abspath('..'))
     # # 设置下标 划分训练集和测试集
     # index = [i for i in range(51)]
     # random.shuffle(index)

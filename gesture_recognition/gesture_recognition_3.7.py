@@ -1,19 +1,22 @@
-#!E:\Python\Python368-64\python.exe
-# -*- encoding: utf-8 -*-
-'''
-@File    :   gesture_recognition_3.1.py
-@Time    :   2021/05/28 15:56:43
-@Author  :   Yu Xiao 于潇 
-@Version :   1.0
-@Contact :   superyuxiao@icloud.com
-@License :   (C)Copyright 2020-2021, Key Laboratory of University Wireless Communication
-                Beijing University of Posts and Telecommunications
-@Desc    :   None
-'''
+# -*- coding: utf-8 -*-
+# @Author   : YuXiao 于潇
+# @Time     : 2021/7/26 8:34 下午
+# @File     : gesture_recognition_3.7.py
+# @Project  : CSI-Project
+# @Contact  : superyuxiao@icloud.com
+# @License  : (C)Copyright 2020-2021, Key Laboratory of University Wireless Communication
+#                Beijing University of Posts and Telecommunications
 
 # ------------------------------ file details ------------------------------ #
 # 四个人，一个位置，巴特沃斯低通，PCA，九个天线对，81*9输入CNN
 # 使用pytorch重构
+# 创建自己的数据集，但是速度特别特别特别慢
+# 四个人，一个位置，巴特沃斯低通，30路子载波，一个天线对，81*30输入CNN。修改了网络，添加了一个全连接层。
+# （模型不收敛可能是全连接层的输入输出分配不好，也可能是学习率的问题，目前0.001）
+# 整理原始数据的读取方式
+# 按不同人划分训练集和测试集
+# 特征增强，相关信息提取
+# 增加动作类别
 # ------------------------------ file details ------------------------------ #
 
 # 加载相关库
@@ -34,6 +37,7 @@ from matplotlib.pyplot import subplot
 import numpy as np
 from sklearn import model_selection
 from sklearn.model_selection import train_test_split
+from sklearn.utils import shuffle
 from sklearn.decomposition import PCA
 from sklearn import svm
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
@@ -132,42 +136,11 @@ def read_sample(filepath):
     return scale_csi
 
 
-def plt_9_amplitude(scale_csi_abs, subcarries_range):
-    subplot(3, 3, 1)
-    for i in subcarries_range:
-        plt.plot(scale_csi_abs[:, i, 0, 0])
-    subplot(3, 3, 2)
-    for i in subcarries_range:
-        plt.plot(scale_csi_abs[:, i, 0, 1])
-    subplot(3, 3, 3)
-    for i in subcarries_range:
-        plt.plot(scale_csi_abs[:, i, 0, 2])
-    subplot(3, 3, 4)
-    for i in subcarries_range:
-        plt.plot(scale_csi_abs[:, i, 1, 0])
-    subplot(3, 3, 5)
-    for i in subcarries_range:
-        plt.plot(scale_csi_abs[:, i, 1, 1])
-    subplot(3, 3, 6)
-    for i in subcarries_range:
-        plt.plot(scale_csi_abs[:, i, 1, 2])
-    subplot(3, 3, 7)
-    for i in subcarries_range:
-        plt.plot(scale_csi_abs[:, i, 2, 0])
-    subplot(3, 3, 8)
-    for i in subcarries_range:
-        plt.plot(scale_csi_abs[:, i, 2, 1])
-    subplot(3, 3, 9)
-    for i in subcarries_range:
-        plt.plot(scale_csi_abs[:, i, 2, 2])
-    plt.show()
-
-
 def butterworth_lowpass(scale_csi, order, wn):
     """
     @description  : 巴特沃斯低通滤波器
     ---------
-    @param  : scale_csi：归一化后的csi，order：滤波器阶数，wn：归一化截至角频率 
+    @param  : scale_csi：归一化后的csi，order：滤波器阶数，wn：归一化截至角频率
     -------
     @Returns  : 低通滤波后的csi幅度
     -------
@@ -231,131 +204,117 @@ def PCA_1(csi_abs, n_components, whiten):
     return data_pca
 
 
-# 不同人不同位置具有相同的数据处理过程
-# 根据不同工程，对应修改函数代码
-# def data_processing(path, feature_number, label):
-#     csi_data = np.empty((50, feature_number + 1))
-#     for i in range(50):
-#         # 样本路径
-#         filepath = path + str(i) +'.npy'
-#         # 读取样本
-#         scale_csi = read_sample(filepath)
-#         #! 去除前20帧
-#         scale_csi = scale_csi[20:,:,:,:]
-#         # print(np.shape(scale_csi))
-#         ones_csi = np.ones((800,30,3,3))
-#         ones_csi.dtype = 'float64'
-#         #! 截取长度800
-#         if np.shape(scale_csi)[0] < 800:
-#             scale_csi = ones_csi
-#         else:
-#             scale_csi = scale_csi[:800,:,:]
-#         # print(np.shape(scale_csi))
-#         #! 求csi ratio
-#         csi_ratio = scale_csi[:,:,0,0]/scale_csi[:,:,0,1]
-#         # print(np.shape(csi_ratio))
-#         # csi ratio phase
-#         csi_ratio_phase = np.unwrap(np.angle(np.transpose(csi_ratio)))
-#         #! 归一化
-#         # normalizer = MinMaxScaler()
-#         # csi_normalize = normalizer.fit_transform(csi_ratio_phase)
-#         # csi_normalize = minmax_scale(csi_ratio_phase,axis=3)
-#         csi_max = np.max(csi_ratio_phase)
-#         csi_min = np.min(csi_ratio_phase)
-#         csi_normalize = (csi_ratio_phase-csi_min)/(csi_max - csi_min)
-#         # 添加标签
-#         csi_vector = np.reshape(csi_normalize, (24000,))
-#         csi_data[i] = np.append(csi_vector, label)
-#         csi_data.dtype = 'float64'
-#         # 返回数据
-#         data = csi_data
-#     return data
-
 def data_processing(path, feature_number, label):
-    csi_data = np.empty((50, feature_number + 1))
+    Den_set = np.zeros([50, feature_number + 1])
     for i in range(50):
         # 样本路径
         filepath = path + str(i) + '.npy'
         # 读取样本
         scale_csi = read_sample(filepath)
-        # 低通滤波
-        csi_lowpass = butterworth_lowpass(scale_csi, 7, 0.01)
-        # PCA
-        csi_pca_9 = PCA_9(csi_abs=csi_lowpass, n_components=1, whiten=False)
-        # 画幅度图
-        # plt_9_amplitude(csi_pca_9,range(1))
-        # 只选取天线对0-0
-        csi_pca = csi_pca_9[:, 0, :, :]
-        # 截取长度800，步进10采样
-        csi_vector = np.zeros((81, 3, 3))
-        if np.shape(csi_pca)[0] < 810:
-            csi_empty = np.zeros((810, 3, 3))
-            csi_empty[:np.shape(csi_pca)[0]] = csi_pca[:, :, :]
-            csi_vector[:] = csi_empty[::10, :, :]
-        else:
-            csi_pca = csi_pca[:809, :, :]
-            csi_vector[:] = csi_pca[::10, :, :]
-        # 添加标签
-        csi_vector = np.reshape(csi_vector, (81, 9))
-        csi_vector = np.reshape(csi_vector, (729,))
-        csi_data[i] = np.append(csi_vector, label)
-        csi_data.dtype = 'float64'
-        # 返回数据
-        data = csi_data
-    return data
+        # 取1*3天线对
+        raw_csi = scale_csi[:, :, 0, :]
+        raw_csi = np.reshape(raw_csi, [raw_csi.shape[0], 30, 1, 3])
+        # print(raw_csi.shape)
+        st_csi = np.zeros_like(raw_csi)
+        # 遗忘因子
+        theta = 0.7
+        for j in range(1, raw_csi.shape[0]):
+            st_csi[j, :, :, :] = theta * raw_csi[j, :, :, :] + (1 - theta) * st_csi[j - 1, :, :, :]
+        dy_csi = raw_csi - st_csi
+        # 整理shape
+        abs_dy_csi = abs(dy_csi)
+        abs_dy_csi = np.reshape(abs_dy_csi, [abs_dy_csi.shape[0], 30, 3])
+        abs_dy_csi = np.reshape(abs_dy_csi, [abs_dy_csi.shape[0], 90])
+        # print(abs_dy_csi.shape)
+        # 分段
+        k = 3
+        split_index = [i for i in range(int(abs_dy_csi.shape[0] / k), abs_dy_csi.shape[0], int(abs_dy_csi.shape[0] / k))]
+        segment_dy_csi = np.split(abs_dy_csi, split_index, axis=0)
+        if np.shape(segment_dy_csi[0]) != np.shape(segment_dy_csi[-1]):
+            segment_dy_csi = segment_dy_csi[:-1]  # 去除最后一个， 保证各片段等长度
+        # 相关计算
+        cross_segment = []
+        for m in range(len(segment_dy_csi)):
+            for n in range(m, len(segment_dy_csi)):
+                t = np.mean(segment_dy_csi[m])
+                u1 = segment_dy_csi[m] - np.mean(segment_dy_csi[m])
+                u2 = segment_dy_csi[n] - np.mean(segment_dy_csi[n])
+                mul = np.matmul(np.transpose(u1), u2)
+                cross_segment.append(mul)
+        cross_segment = np.array(cross_segment)
+        cross_segment = np.reshape(cross_segment, [cross_segment.shape[1], -1])
+        # 缩小尺寸
+        Den = np.matmul(cross_segment, np.transpose(cross_segment))
+        Den = np.reshape(Den, [-1, ])
+        Den = np.append(Den, label)
+        a = Den[8100]
+        Den_set[i] = Den
+
+    b = np.max(Den_set)
+
+    return Den_set
 
 
 # 定义数据集读取器
-def load_data(mode='train'):
+def load_data(filepath=None):
     # ! 读取数据文件
     # * 读取数据
-    feature_number = 81 * 3 * 3
+    feature_number = 90 * 90
     # ! DX
     # 手势O，位置1
-    filepath_O_1 = '/Users/yuxiao/CSI_data/classroom_data_unit/DX/O/gresture_O_location_1_'
+    filepath_O_1 = filepath + 'DX/O/gresture_O_location_5_'
     csi_DX_O_1 = data_processing(filepath_O_1, feature_number, 0)
     # 手势X，位置1
-    filepath_X_1 = '/Users/yuxiao/CSI_data/classroom_data_unit/DX/X/gresture_X_location_1_'
-    csi_DX_X_1 = data_processing(filepath_X_1, feature_number, 1)
+    filepath_X_1 = filepath + 'DX/X/gresture_X_location_3_'
+    csi_DX_X_1 = data_processing(filepath_X_1, feature_number, label=1)
     # 手势PO，位置1
-    filepath_PO_1 = '/Users/yuxiao/CSI_data/classroom_data_unit/DX/PO/gresture_PO_location_1_'
+    filepath_PO_1 = filepath + 'DX/PO/gresture_PO_location_4_'
     csi_DX_PO_1 = data_processing(filepath_PO_1, feature_number, 2)
+    # 手势SIT，位置1
+    filepath_SIT_1 = filepath + 'DX/SIT/activity_SIT_'
+    csi_DX_SIT_1 = data_processing(filepath_SIT_1, feature_number, 3)
     # 整合
     csi_DX_1 = np.array((csi_DX_O_1, csi_DX_X_1, csi_DX_PO_1))
     csi_DX_1 = np.reshape(csi_DX_1, (-1, feature_number + 1))  # ! 注意修改
     print(datetime.datetime.now())
     # ! LJP
     # 手势O，位置1
-    filepath_O_1 = '/Users/yuxiao/CSI_data/classroom_data_unit/LJP/O/gresture_O_location_1_'
+    filepath_O_1 = filepath + 'LJP/O/gresture_O_location_1_'
     csi_LJP_O_1 = data_processing(filepath_O_1, feature_number, 0)
     # 手势X，位置1
-    filepath_X_1 = '/Users/yuxiao/CSI_data/classroom_data_unit/LJP/X/gresture_X_location_1_'
+    filepath_X_1 = filepath + 'LJP/X/gresture_X_location_1_'
     csi_LJP_X_1 = data_processing(filepath_X_1, feature_number, 1)
     # 手势PO，位置1
-    filepath_PO_1 = '/Users/yuxiao/CSI_data/classroom_data_unit/LJP/PO/gresture_PO_location_1_'
+    filepath_PO_1 = filepath + 'LJP/PO/gresture_PO_location_1_'
     csi_LJP_PO_1 = data_processing(filepath_PO_1, feature_number, 2)
+    # 手势SIT，位置1
+    filepath_SIT_1 = filepath + 'LJP/SIT/activity_SIT_'
+    csi_LJP_SIT_1 = data_processing(filepath_SIT_1, feature_number, 3)
     # 整合
     csi_LJP_1 = np.array((csi_LJP_O_1, csi_LJP_X_1, csi_LJP_PO_1))
     csi_LJP_1 = np.reshape(csi_LJP_1, (-1, feature_number + 1))
     print(datetime.datetime.now())
     # ! LZW
     # 手势O，位置1
-    filepath_O_1 = '/Users/yuxiao/CSI_data/classroom_data_unit/LZW/O/gresture_O_location_1_'
+    filepath_O_1 = filepath + 'LZW/O/gresture_O_location_2_'
     csi_LZW_O_1 = data_processing(filepath_O_1, feature_number, 0)
     # 手势X，位置1
-    filepath_X_1 = '/Users/yuxiao/CSI_data/classroom_data_unit/LZW/X/gresture_X_location_1_'
+    filepath_X_1 = filepath + 'LZW/X/gresture_X_location_3_'
     csi_LZW_X_1 = data_processing(filepath_X_1, feature_number, 1)
     # 手势PO，位置1
-    filepath_PO_1 = '/Users/yuxiao/CSI_data/classroom_data_unit/LZW/PO/gresture_PO_location_1_'
+    filepath_PO_1 = filepath + 'LZW/PO/gresture_PO_location_5_'
     csi_LZW_PO_1 = data_processing(filepath_PO_1, feature_number, 2)
+    # 手势SIT，位置1
+    filepath_SIT_1 = filepath + 'LZW/SIT/activity_SIT_'
+    csi_LZW_SIT_1 = data_processing(filepath_SIT_1, feature_number, 3)
     # 整合
-    csi_LZW_1 = np.array((csi_LZW_O_1, csi_LZW_X_1, csi_LZW_PO_1))
+    csi_LZW_1 = np.array((csi_LZW_O_1, csi_LZW_X_1, csi_LZW_PO_1, csi_LZW_SIT_1))
     csi_LZW_1 = np.reshape(csi_LZW_1, (-1, feature_number + 1))
     print(datetime.datetime.now())
     # ! MYW
     # 手势O，位置1
     # ? 只有手势O
-    filepath_O_1 = '/Users/yuxiao/CSI_data/classroom_data_unit/MYW/O/gresture_O_location_1_'
+    filepath_O_1 = filepath + 'MYW/O/gresture_O_location_4_'
     csi_MYW_O_1 = data_processing(filepath_O_1, feature_number, 0)
     # 整合
     csi_MYW_1 = np.array((csi_MYW_O_1))
@@ -363,22 +322,32 @@ def load_data(mode='train'):
     print(datetime.datetime.now())
     # * 整合所有样本，乱序，分割
     # 整理数据集
-    csi_1 = np.array((csi_DX_1, csi_LJP_1, csi_LZW_1))
+    csi_1 = np.array((csi_LJP_1))
     csi_1 = np.reshape(csi_1, (-1, feature_number + 1))
-    csi_1 = np.append(csi_1, csi_MYW_1, axis=0)
-    csi_1 = np.reshape(csi_1, (-1, feature_number + 1))
+    # csi_1 = np.append(csi_1, csi_MYW_1, axis=0)
+    # csi_1 = np.reshape(csi_1, (-1, feature_number + 1))
+    csi_2 = np.array((csi_LZW_1, csi_DX_1))
+    csi_2 = np.reshape(csi_2, (-1, feature_number + 1))
+    csi_2 = np.append(csi_2, csi_MYW_1, axis=0)
+    csi_2 = np.reshape(csi_2, (-1, feature_number + 1))
     # 分割特征和标签
-    feature, label = np.split(csi_1, (feature_number,),
-                              axis=1)  # feature(150,5),label(150,1) #pylint: disable=unbalanced-tuple-unpacking #防止出现一条警告
-    # 划分训练集和测试集
-    train_feature, test_feature, train_label, test_label = train_test_split(feature, label, random_state=1,
-                                                                            test_size=0.3)
+    train_feature, train_label = np.split(csi_1, (feature_number,), axis=1)
+    test_feature, test_label = np.split(csi_2, (feature_number,), axis=1)
+    train_feature, train_label = shuffle(train_feature, train_label, random_state=1)
+    test_feature, test_label = shuffle(test_feature, test_label, random_state=1)
+    # feature, label = np.split(csi_1, (feature_number,),
+    #                           axis=1)  # feature(150,5),label(150,1) #pylint: disable=unbalanced-tuple-unpacking #防止出现一条警告
+    # # 划分训练集和测试集
+    # train_feature, test_feature, train_label, test_label = train_test_split(feature, label, random_state=1,
+    #                                                                         test_size=0.3)
+    return train_feature, test_feature, train_label, test_label
 
+def load_dataset(mode='train', train_feature=None, test_feature=None, train_label=None, test_label=None, BATCHSIZE=15):
     # 根据输入mode参数决定使用训练集，验证集还是测试
     if mode == 'train':
         imgs = train_feature
         labels = train_label
-    elif mode == 'eval':
+    elif mode == 'test':
         imgs = test_feature
         labels = test_label
     # 获得所有图像的数量
@@ -386,17 +355,17 @@ def load_data(mode='train'):
     index_list = list(range(imgs_length))
 
     # 读入数据时用到的batchsize
-    BATCHSIZE = 15
+    # BATCHSIZE = 15
 
     # 定义数据生成器
     def data_generator():
 
         imgs_list = []
         labels_list = []
-        # 按照索引读取数据 
+        # 按照索引读取数据
         for i in index_list:
             # 读取图像和标签，转换其尺寸和类型
-            img = np.reshape(imgs[i], [1, 81, 9]).astype('float32')
+            img = np.reshape(imgs[i], [1, 90, 90]).astype('float32')
             label = np.reshape(labels[i], [1]).astype('int64')
             imgs_list.append(img)
             labels_list.append(label)
@@ -415,21 +384,28 @@ def load_data(mode='train'):
     return data_generator
 
 
-# 定义模型结构
 class CNN(nn.Module):
     def __init__(self):
         super(CNN, self).__init__()
 
         # 定义卷积层，输出特征通道out_channels设置为20，卷积核的大小kernel_size为5，卷积步长stride=1，padding=2
-        self.conv1 = nn.Conv2d(in_channels=1, out_channels=10, kernel_size=5, stride=1, padding=5)
+        self.conv1 = nn.Conv2d(in_channels=1, out_channels=3, kernel_size=5, stride=1, padding=5)
         # 定义池化层，池化核的大小kernel_size为2，池化步长为2
         self.max_pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
         # 定义卷积层，输出特征通道out_channels设置为20，卷积核的大小kernel_size为5，卷积步长stride=1，padding=2
-        self.conv2 = nn.Conv2d(in_channels=10, out_channels=10, kernel_size=5, stride=1, padding=5)
+        self.conv2 = nn.Conv2d(in_channels=3, out_channels=3, kernel_size=5, stride=1, padding=5)
         # 定义池化层，池化核的大小kernel_size为2，池化步长为2
         self.max_pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
+        # 定义卷积层，输出特征通道out_channels设置为20，卷积核的大小kernel_size为5，卷积步长stride=1，padding=2
+        self.conv3 = nn.Conv2d(in_channels=3, out_channels=3, kernel_size=5, stride=1, padding=5)
+        # 定义池化层，池化核的大小kernel_size为2，池化步长为2
+        self.max_pool3 = nn.MaxPool2d(kernel_size=2, stride=2)
         # 定义一层全连接层，输出维度是10
-        self.fc = nn.Linear(in_features=1440, out_features=3)
+        self.fc1 = nn.Linear(in_features=768, out_features=192)
+        # 定义一层全连接层，输出维度是10
+        self.fc2 = nn.Linear(in_features=192, out_features=48)
+        # 定义一层全连接层，输出维度是10
+        self.fc3 = nn.Linear(in_features=48, out_features=4)
 
     # 定义网络前向计算过程，卷积后紧接着使用池化层，最后使用全连接层计算最终输出
     # 卷积层激活函数使用Relu，全连接层激活函数使用softmax
@@ -440,27 +416,41 @@ class CNN(nn.Module):
         x = self.conv2(x)
         x = F.relu(x)
         x = self.max_pool2(x)
-        x = x.view([x.shape[0], 1440])
-        x = self.fc(x)
+        x = self.conv3(x)
+        x = F.relu(x)
+        x = self.max_pool3(x)
+        x = x.view([x.shape[0], 768])
+        x = self.fc1(x)
+        x = F.dropout(x, p=0.5)
+        x = self.fc2(x)
+        x = F.dropout(x, p=0.5)
+        x = self.fc3(x)
         x = F.softmax(x, dim=1)
 
         return x
 
 
 if __name__ == '__main__':
+
     # 仅优化算法的设置有所差别
     model = CNN()
     model.train()
+    params = list(model.parameters())
 
+    BATCHSIZE = 15
     # 调用加载数据的函数
-    train_loader = load_data('train')
+    # train_feature, test_feature, train_label, test_label = load_data('E:/CSI/CSI/classroom_data_unit/')
+    train_feature, test_feature, train_label, test_label = load_data('/Users/yuxiao/CSI_data/classroom_data_unit/')
+    train_loader = load_dataset(mode='train',train_feature=train_feature,train_label= train_label, BATCHSIZE= BATCHSIZE)
     # 设置不同初始学习率
-    optimizer = optim.SGD(model.parameters(), lr=0.01)
+    optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     # optimizer = fluid.optimizer.SGDOptimizer(learning_rate=0.001, parameter_list=model.parameters())
     # optimizer = fluid.optimizer.SGDOptimizer(learning_rate=0.1, parameter_list=model.parameters())
     criterion = nn.CrossEntropyLoss()
-    EPOCH_NUM = 50
+    EPOCH_NUM = 20
     for epoch_id in range(EPOCH_NUM):
+        acc_set = []
+        avg_loss_set = []
         for batch_id, data in enumerate(train_loader()):
             # 准备数据，变得更加简洁
             image_data, label_data = data
@@ -472,24 +462,57 @@ if __name__ == '__main__':
             predict = model(image)
             # 计算损失，取一个批次样本损失的平均值
             loss = criterion(predict, label)
+            # 准确率
+            _, predicted = torch.max(predict, 1)
+            acc = (predicted == label).sum().item() / BATCHSIZE
+            acc_set.append(acc)
+            avg_loss_set.append(float(loss.detach().numpy()))
 
-            # 每训练了200批次的数据，打印下当前Loss的情况
-            if batch_id % 2 == 0:
-                print("epoch: {}, batch: {}, loss is: {}".format(epoch_id, batch_id, loss.detach().numpy()))
+            # # 每训练了200批次的数据，打印下当前Loss的情况
+            # if batch_id % 2 == 0:
+            #     print("epoch: {}, batch: {}, loss is: {}, acc is: {}".format(epoch_id, batch_id, loss.detach().numpy(),
+            #                                                                  acc))
 
             # 后向传播，更新参数的过程
             loss.backward()
             optimizer.step()
+        # 计算多个batch的平均损失和准确率
+        acc_val_mean = np.array(acc_set).mean()
+        avg_loss_val_mean = np.array(avg_loss_set).mean()
 
-    #     #保存模型参数
-    PATH = 'model/gesture_recognition_3-1.pth'
+        print('epoch: {}, loss={}, acc={}'.format(epoch_id, avg_loss_val_mean, acc_val_mean))
+
+        model.eval()
+        test_loader = load_dataset(mode='test', test_feature= test_feature,test_label= test_label,BATCHSIZE= BATCHSIZE)
+        acc_set = []
+        avg_loss_set = []
+        for batch_id, data in enumerate(test_loader()):
+            images, labels = data
+            image = torch.from_numpy(images)
+            label = torch.from_numpy(labels).squeeze()
+            outputs = model(image)
+            loss = F.cross_entropy(outputs, label)
+            _, predicted = torch.max(outputs, 1)
+            acc = (predicted == label).sum().item() / BATCHSIZE
+            acc_set.append(acc)
+            avg_loss_set.append(float(loss.detach().numpy()))
+
+        # 计算多个batch的平均损失和准确率
+        acc_val_mean = np.array(acc_set).mean()
+        avg_loss_val_mean = np.array(avg_loss_set).mean()
+
+        print('test...., loss={}, acc={}'.format(avg_loss_val_mean, acc_val_mean))
+
+    # 保存模型参数
+    PATH = '../model/gesture_recognition_3-6.pth'
     torch.save(model.state_dict(), PATH)
 
     model = CNN()
     model.load_state_dict(torch.load(PATH))
-
+    print('test......')
     model.eval()
-    test_loader = load_data('eval')
+    test_loader = load_dataset(mode='test', test_feature= test_feature,test_label= test_label,BATCHSIZE= BATCHSIZE)
+
     acc_set = []
     avg_loss_set = []
     for batch_id, data in enumerate(test_loader()):
@@ -499,7 +522,7 @@ if __name__ == '__main__':
         outputs = model(image)
         loss = F.cross_entropy(outputs, label)
         _, predicted = torch.max(outputs, 1)
-        acc = (predicted == label).sum().item() / 15
+        acc = (predicted == label).sum().item() / BATCHSIZE
         acc_set.append(acc)
         avg_loss_set.append(float(loss.detach().numpy()))
 
@@ -509,6 +532,35 @@ if __name__ == '__main__':
 
     print('loss={}, acc={}'.format(avg_loss_val_mean, acc_val_mean))
 
-    # BatchSize=50, epoch=30, loss=0.6554504831631979, acc=0.899999996026357
-    # BatchSize=50, epoch=30, loss=0.659913182258606, acc=0.8999999999999999
-    # BatchSize=15, epoch=50, loss=0.6402452290058136, acc=0.9066666666666666
+    # 81*3*3
+    # loss=0.6554504831631979, acc=0.899999996026357
+    # loss=0.659913182258606, acc=0.8999999999999999
+    # 81*30
+    # BatchSize = 50 epoch = 30 loss=0.6156755884488424, acc=0.9533333333333333
+    # BatchSize = 50 epoch = 50 loss=0.5701029102007548, acc=0.9933333333333333
+    # BatchSize = 15 epoch = 50 loss=0.5590923130512238, acc=0.9933333333333334
+    # BatchSize = 15 epoch = 50 loss=0.5587734162807465, acc=0.9933333333333334
+    # BatchSize = 15 epoch = 50 loss=0.5524427711963653, acc=1.0
+    # 不同人划分训练集测试集
+    # DX测试，其他训练
+    # 训练集 epoch: 49, batch: 22, loss is: 0.5519987940788269, acc is: 1.0
+    # 测试集 loss=0.967512023448944, acc=0.5866666666666667
+    # LJP测试
+    # epoch: 49, batch: 16, loss is: 0.7997506260871887, acc is: 0.7333333333333333
+    # epoch: 49, batch: 18, loss is: 0.8115711212158203, acc is: 0.7333333333333333
+    # epoch: 49, batch: 20, loss is: 0.8097754120826721, acc is: 0.7333333333333333
+    # epoch: 49, batch: 22, loss is: 1.0042685270309448, acc is: 0.5333333333333333
+    # loss = 0.9660914719104767, acc = 0.6266666666666666
+    # epoch: 49, batch: 22, loss is: 0.5522249937057495, acc is: 1.0
+    # loss = 1.2215073466300965, acc = 0.33333333333333337
+
+    # 修改预处理方法后
+    # LJP测试
+    # epoch: 49, loss = 0.56305659810702, acc = 0.9611111111111112
+    # loss = 0.5654346227645874, acc = 0.9866666666666667
+    # DX测试
+    # epoch: 19, loss = 0.569031742711862, acc = 0.9611111111111112
+    # loss = 0.5699916005134582, acc = 0.9866666666666667
+    # LZW测试
+    # epoch: 19, loss=0.5698578630884489, acc=0.9611111111111112
+    # loss=0.5705591678619385, acc=0.9866666666666667

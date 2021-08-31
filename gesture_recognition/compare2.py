@@ -1,26 +1,16 @@
-#!E:\Python\Python368-64\python.exe
-# -*- encoding: utf-8 -*-
-'''
-@File    :   gesture_recognition_3.6.py
-@Time    :   2021/07/19 17:12:38
-@Author  :   Yu Xiao 于潇 
-@Version :   1.0
-@Contact :   superyuxiao@icloud.com
-@License :   (C)Copyright 2020-2021, Key Laboratory of University Wireless Communication
-                Beijing University of Posts and Telecommunications
-@Desc    :   None
-'''
+# -*- coding: utf-8 -*-
+# @Author   : YuXiao 于潇
+# @Time     : 2021/8/19 4:17 下午
+# @File     : compare2.py
+# @Project  : CSI-Project
+# @Contact  : superyuxiao@icloud.com
+# @License  : (C)Copyright 2020-2021, Key Laboratory of University Wireless Communication
+#                Beijing University of Posts and Telecommunications
 
-# ------------------------------ file details ------------------------------ #
-# 四个人，一个位置，巴特沃斯低通，PCA，九个天线对，81*9输入CNN
-# 使用pytorch重构
-# 创建自己的数据集，但是速度特别特别特别慢
-# 四个人，一个位置，巴特沃斯低通，30路子载波，一个天线对，81*30输入CNN。修改了网络，添加了一个全连接层。
-# （模型不收敛可能是全连接层的输入输出分配不好，也可能是学习率的问题，目前0.001）
-# 整理原始数据的读取方式
-# 按不同人划分训练集和测试集
-# 特征增强，相关信息提取
-# ------------------------------ file details ------------------------------ #
+# --------------------------- file details --------------------------- #
+#
+#
+# --------------------------- file details --------------------------- #
 
 # 加载相关库
 import os
@@ -143,7 +133,7 @@ def butterworth_lowpass(scale_csi, order, wn):
     """
     @description  : 巴特沃斯低通滤波器
     ---------
-    @param  : scale_csi：归一化后的csi，order：滤波器阶数，wn：归一化截至角频率 
+    @param  : scale_csi：归一化后的csi，order：滤波器阶数，wn：归一化截至角频率
     -------
     @Returns  : 低通滤波后的csi幅度
     -------
@@ -234,8 +224,9 @@ def data_processing(path, feature_number, label):
         abs_dy_csi = np.reshape(abs_dy_csi, [abs_dy_csi.shape[0], 90])
         # print(abs_dy_csi.shape)
         # 分段
-        k = 2
-        split_index = [i for i in range(int(abs_dy_csi.shape[0] / k), abs_dy_csi.shape[0], int(abs_dy_csi.shape[0] / k))]
+        k = 3
+        split_index = [i for i in
+                       range(int(abs_dy_csi.shape[0] / k), abs_dy_csi.shape[0], int(abs_dy_csi.shape[0] / k))]
         segment_dy_csi = np.split(abs_dy_csi, split_index, axis=0)
         if np.shape(segment_dy_csi[0]) != np.shape(segment_dy_csi[-1]):
             segment_dy_csi = segment_dy_csi[:-1]  # 去除最后一个， 保证各片段等长度
@@ -279,50 +270,105 @@ def load_data(filepath=None):
     csi_DX_1 = np.array((csi_DX_O_1, csi_DX_X_1, csi_DX_PO_1))
     csi_DX_1 = np.reshape(csi_DX_1, (-1, feature_number + 1))  # ! 注意修改
     print(datetime.datetime.now())
-    # ! LJP
-    # 手势O，位置1
-    filepath_O_1 = filepath + 'LJP/O/gresture_O_location_1_'
-    csi_LJP_O_1 = data_processing(filepath_O_1, feature_number, 0)
-    # 手势X，位置1
-    filepath_X_1 = filepath + 'LJP/X/gresture_X_location_1_'
-    csi_LJP_X_1 = data_processing(filepath_X_1, feature_number, 1)
-    # 手势PO，位置1
-    filepath_PO_1 = filepath + 'LJP/PO/gresture_PO_location_1_'
-    csi_LJP_PO_1 = data_processing(filepath_PO_1, feature_number, 2)
+    # ! DX
+    # 手势O，位置2
+    filepath_O_2 = filepath + 'DX/O/gresture_O_location_2_'
+    csi_DX_O_2 = data_processing(filepath_O_2, feature_number, 0)
+    # 手势X，位置2
+    filepath_X_2 = filepath + 'DX/X/gresture_X_location_2_'
+    csi_DX_X_2 = data_processing(filepath_X_2, feature_number, 1)
+    # 手势PO，位置2
+    filepath_PO_2 = filepath + 'DX/PO/gresture_PO_location_2_'
+    csi_DX_PO_2 = data_processing(filepath_PO_2, feature_number, 2)
     # 整合
-    csi_LJP_1 = np.array((csi_LJP_O_1, csi_LJP_X_1, csi_LJP_PO_1))
-    csi_LJP_1 = np.reshape(csi_LJP_1, (-1, feature_number + 1))
+    csi_DX_2 = np.array((csi_DX_O_2, csi_DX_X_2, csi_DX_PO_2))
+    csi_DX_2 = np.reshape(csi_DX_2, (-1, feature_number + 1))  # ! 注意修改
     print(datetime.datetime.now())
-    # ! LZW
-    # 手势O，位置1
-    filepath_O_1 = filepath + 'LZW/O/gresture_O_location_1_'
-    csi_LZW_O_1 = data_processing(filepath_O_1, feature_number, 0)
-    # 手势X，位置1
-    filepath_X_1 = filepath + 'LZW/X/gresture_X_location_1_'
-    csi_LZW_X_1 = data_processing(filepath_X_1, feature_number, 1)
-    # 手势PO，位置1
-    filepath_PO_1 = filepath + 'LZW/PO/gresture_PO_location_1_'
-    csi_LZW_PO_1 = data_processing(filepath_PO_1, feature_number, 2)
+    # 手势O，位置3
+    filepath_O_3 = filepath + 'DX/O/gresture_O_location_3_'
+    csi_DX_O_3 = data_processing(filepath_O_3, feature_number, 0)
+    # 手势X，位置3
+    filepath_X_3 = filepath + 'DX/X/gresture_X_location_3_'
+    csi_DX_X_3 = data_processing(filepath_X_3, feature_number, 1)
+    # 手势PO，位置3
+    filepath_PO_3 = filepath + 'DX/PO/gresture_PO_location_3_'
+    csi_DX_PO_3 = data_processing(filepath_PO_3, feature_number, 2)
     # 整合
-    csi_LZW_1 = np.array((csi_LZW_O_1, csi_LZW_X_1, csi_LZW_PO_1))
-    csi_LZW_1 = np.reshape(csi_LZW_1, (-1, feature_number + 1))
+    csi_DX_3 = np.array((csi_DX_O_3, csi_DX_X_3, csi_DX_PO_3))
+    csi_DX_3 = np.reshape(csi_DX_3, (-1, feature_number + 1))  # ! 注意修改
     print(datetime.datetime.now())
-    # ! MYW
-    # 手势O，位置1
-    # ? 只有手势O
-    filepath_O_1 = filepath + 'MYW/O/gresture_O_location_1_'
-    csi_MYW_O_1 = data_processing(filepath_O_1, feature_number, 0)
+    # 手势O，位置4
+    filepath_O_4 = filepath + 'DX/O/gresture_O_location_4_'
+    csi_DX_O_4 = data_processing(filepath_O_4, feature_number, 0)
+    # 手势X，位置4
+    filepath_X_4 = filepath + 'DX/X/gresture_X_location_4_'
+    csi_DX_X_4 = data_processing(filepath_X_4, feature_number, 1)
+    # 手势PO，位置4
+    filepath_PO_4 = filepath + 'DX/PO/gresture_PO_location_4_'
+    csi_DX_PO_4 = data_processing(filepath_PO_4, feature_number, 2)
     # 整合
-    csi_MYW_1 = np.array((csi_MYW_O_1))
-    csi_MYW_1 = np.reshape(csi_MYW_1, (-1, feature_number + 1))
+    csi_DX_4 = np.array((csi_DX_O_4, csi_DX_X_4, csi_DX_PO_4))
+    csi_DX_4 = np.reshape(csi_DX_4, (-1, feature_number + 1))  # ! 注意修改
     print(datetime.datetime.now())
-    # * 整合所有样本，乱序，分割
-    # 整理数据集
-    csi_1 = np.array((csi_LJP_1, csi_LZW_1))
+    # 手势O，位置5
+    filepath_O_5 = filepath + 'DX/O/gresture_O_location_5_'
+    csi_DX_O_5 = data_processing(filepath_O_5, feature_number, 0)
+    # 手势X，位置5
+    filepath_X_5 = filepath + 'DX/X/gresture_X_location_5_'
+    csi_DX_X_5 = data_processing(filepath_X_5, feature_number, 1)
+    # 手势PO，位置5
+    filepath_PO_5 = filepath + 'DX/PO/gresture_PO_location_5_'
+    csi_DX_PO_5 = data_processing(filepath_PO_5, feature_number, 2)
+    # 整合
+    csi_DX_5 = np.array((csi_DX_O_5, csi_DX_X_5, csi_DX_PO_5))
+    csi_DX_5 = np.reshape(csi_DX_5, (-1, feature_number + 1))  # ! 注意修改
+    print(datetime.datetime.now())
+    # # ! LJP
+    # # 手势O，位置1
+    # filepath_O_1 = filepath + 'LJP/O/gresture_O_location_1_'
+    # csi_LJP_O_1 = data_processing(filepath_O_1, feature_number, 0)
+    # # 手势X，位置1
+    # filepath_X_1 = filepath + 'LJP/X/gresture_X_location_1_'
+    # csi_LJP_X_1 = data_processing(filepath_X_1, feature_number, 1)
+    # # 手势PO，位置1
+    # filepath_PO_1 = filepath + 'LJP/PO/gresture_PO_location_1_'
+    # csi_LJP_PO_1 = data_processing(filepath_PO_1, feature_number, 2)
+    # # 整合
+    # csi_LJP_1 = np.array((csi_LJP_O_1, csi_LJP_X_1, csi_LJP_PO_1))
+    # csi_LJP_1 = np.reshape(csi_LJP_1, (-1, feature_number + 1))
+    # print(datetime.datetime.now())
+    # # ! LZW
+    # # 手势O，位置1
+    # filepath_O_1 = filepath + 'LZW/O/gresture_O_location_1_'
+    # csi_LZW_O_1 = data_processing(filepath_O_1, feature_number, 0)
+    # # 手势X，位置1
+    # filepath_X_1 = filepath + 'LZW/X/gresture_X_location_1_'
+    # csi_LZW_X_1 = data_processing(filepath_X_1, feature_number, 1)
+    # # 手势PO，位置1
+    # filepath_PO_1 = filepath + 'LZW/PO/gresture_PO_location_1_'
+    # csi_LZW_PO_1 = data_processing(filepath_PO_1, feature_number, 2)
+    # # 整合
+    # csi_LZW_1 = np.array((csi_LZW_O_1, csi_LZW_X_1, csi_LZW_PO_1))
+    # csi_LZW_1 = np.reshape(csi_LZW_1, (-1, feature_number + 1))
+    # print(datetime.datetime.now())
+    # # ! MYW
+    # # 手势O，位置1
+    # # ? 只有手势O
+    # filepath_O_1 = filepath + 'MYW/O/gresture_O_location_1_'
+    # csi_MYW_O_1 = data_processing(filepath_O_1, feature_number, 0)
+    # # 整合
+    # csi_MYW_1 = np.array((csi_MYW_O_1))
+    # csi_MYW_1 = np.reshape(csi_MYW_1, (-1, feature_number + 1))
+    # print(datetime.datetime.now())
+    # # * 整合所有样本，乱序，分割
+    # # 整理数据集
+    # csi_1 = np.array((csi_LJP_1, csi_LZW_1, csi_DX_1))
+    # csi_1 = np.reshape(csi_1, (-1, feature_number + 1))
+    # csi_1 = np.append(csi_1, csi_MYW_1, axis=0)
+    # csi_1 = np.reshape(csi_1, (-1, feature_number + 1))
+    csi_1 = np.array((csi_DX_1, csi_DX_4, csi_DX_5))
     csi_1 = np.reshape(csi_1, (-1, feature_number + 1))
-    csi_1 = np.append(csi_1, csi_MYW_1, axis=0)
-    csi_1 = np.reshape(csi_1, (-1, feature_number + 1))
-    csi_2 = np.array((csi_DX_1))
+    csi_2 = np.array((csi_DX_2, csi_DX_3))
     csi_2 = np.reshape(csi_2, (-1, feature_number + 1))
     # csi_2 = np.append(csi_2, csi_MYW_1, axis=0)
     # csi_2 = np.reshape(csi_2, (-1, feature_number + 1))
@@ -337,6 +383,7 @@ def load_data(filepath=None):
     # train_feature, test_feature, train_label, test_label = train_test_split(feature, label, random_state=1,
     #                                                                         test_size=0.3)
     return train_feature, test_feature, train_label, test_label
+
 
 def load_dataset(mode='train', train_feature=None, test_feature=None, train_label=None, test_label=None, BATCHSIZE=15):
     # 根据输入mode参数决定使用训练集，验证集还是测试
@@ -358,7 +405,7 @@ def load_dataset(mode='train', train_feature=None, test_feature=None, train_labe
 
         imgs_list = []
         labels_list = []
-        # 按照索引读取数据 
+        # 按照索引读取数据
         for i in index_list:
             # 读取图像和标签，转换其尺寸和类型
             img = np.reshape(imgs[i], [1, 90, 90]).astype('float32')
@@ -437,7 +484,7 @@ if __name__ == '__main__':
     # 调用加载数据的函数
     # train_feature, test_feature, train_label, test_label = load_data('E:/CSI/CSI/classroom_data_unit/')
     train_feature, test_feature, train_label, test_label = load_data('/Users/yuxiao/CSI_data/classroom_data_unit/')
-    train_loader = load_dataset(mode='train',train_feature=train_feature,train_label= train_label, BATCHSIZE= BATCHSIZE)
+    train_loader = load_dataset(mode='train', train_feature=train_feature, train_label=train_label, BATCHSIZE=BATCHSIZE)
     # 设置不同初始学习率
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
     # optimizer = fluid.optimizer.SGDOptimizer(learning_rate=0.001, parameter_list=model.parameters())
@@ -475,10 +522,9 @@ if __name__ == '__main__':
         acc_val_mean = np.array(acc_set).mean()
         avg_loss_val_mean = np.array(avg_loss_set).mean()
 
-        print('epoch: {}, loss={}, acc={}'.format(epoch_id, avg_loss_val_mean, acc_val_mean))
+        print('epoch: {:2d}, loss={:.6f}, acc={:.4f}'.format(epoch_id, avg_loss_val_mean, acc_val_mean), end='\t')
 
-        model.eval()
-        test_loader = load_dataset(mode='test', test_feature= test_feature,test_label= test_label,BATCHSIZE= BATCHSIZE)
+        test_loader = load_dataset(mode='test', test_feature=test_feature, test_label=test_label, BATCHSIZE=BATCHSIZE)
         acc_set = []
         avg_loss_set = []
         for batch_id, data in enumerate(test_loader()):
@@ -496,17 +542,17 @@ if __name__ == '__main__':
         acc_val_mean = np.array(acc_set).mean()
         avg_loss_val_mean = np.array(avg_loss_set).mean()
 
-        print('test...., loss={}, acc={}'.format(avg_loss_val_mean, acc_val_mean))
+        print('test:  loss={:.6f}, acc={:.4f}'.format(avg_loss_val_mean, acc_val_mean))
 
     # 保存模型参数
-    PATH = 'model/gesture_recognition_3-6.pth'
-    torch.save(model.state_dict(), PATH)
+    # PATH = 'model/gesture_recognition_3-6.pth'
+    # torch.save(model.state_dict(), PATH)
 
-    model = CNN()
-    model.load_state_dict(torch.load(PATH))
+    # model = CNN()
+    # model.load_state_dict(torch.load(PATH))
     print('test......')
     model.eval()
-    test_loader = load_dataset(mode='test', test_feature= test_feature,test_label= test_label,BATCHSIZE= BATCHSIZE)
+    test_loader = load_dataset(mode='test', test_feature=test_feature, test_label=test_label, BATCHSIZE=BATCHSIZE)
 
     acc_set = []
     avg_loss_set = []
@@ -525,37 +571,4 @@ if __name__ == '__main__':
     acc_val_mean = np.array(acc_set).mean()
     avg_loss_val_mean = np.array(avg_loss_set).mean()
 
-    print('loss={}, acc={}'.format(avg_loss_val_mean, acc_val_mean))
-
-    # 81*3*3
-    # loss=0.6554504831631979, acc=0.899999996026357
-    # loss=0.659913182258606, acc=0.8999999999999999
-    # 81*30
-    # BatchSize = 50 epoch = 30 loss=0.6156755884488424, acc=0.9533333333333333
-    # BatchSize = 50 epoch = 50 loss=0.5701029102007548, acc=0.9933333333333333
-    # BatchSize = 15 epoch = 50 loss=0.5590923130512238, acc=0.9933333333333334
-    # BatchSize = 15 epoch = 50 loss=0.5587734162807465, acc=0.9933333333333334
-    # BatchSize = 15 epoch = 50 loss=0.5524427711963653, acc=1.0
-    # 不同人划分训练集测试集
-    # DX测试，其他训练
-    # 训练集 epoch: 49, batch: 22, loss is: 0.5519987940788269, acc is: 1.0
-    # 测试集 loss=0.967512023448944, acc=0.5866666666666667
-    # LJP测试
-    # epoch: 49, batch: 16, loss is: 0.7997506260871887, acc is: 0.7333333333333333
-    # epoch: 49, batch: 18, loss is: 0.8115711212158203, acc is: 0.7333333333333333
-    # epoch: 49, batch: 20, loss is: 0.8097754120826721, acc is: 0.7333333333333333
-    # epoch: 49, batch: 22, loss is: 1.0042685270309448, acc is: 0.5333333333333333
-    # loss = 0.9660914719104767, acc = 0.6266666666666666
-    # epoch: 49, batch: 22, loss is: 0.5522249937057495, acc is: 1.0
-    # loss = 1.2215073466300965, acc = 0.33333333333333337
-
-    # 修改预处理方法后
-    # LJP测试
-    # epoch: 49, loss = 0.56305659810702, acc = 0.9611111111111112
-    # loss = 0.5654346227645874, acc = 0.9866666666666667
-    # DX测试
-    # epoch: 19, loss = 0.569031742711862, acc = 0.9611111111111112
-    # loss = 0.5699916005134582, acc = 0.9866666666666667
-    # LZW测试
-    # epoch: 19, loss=0.5698578630884489, acc=0.9611111111111112
-    # loss=0.5705591678619385, acc=0.9866666666666667
+    print('CCFE: loss={:.6f}, acc={:.4f}'.format(avg_loss_val_mean, acc_val_mean))

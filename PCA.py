@@ -15,8 +15,7 @@
 # PCA
 # ------------------------------ file details ------------------------------ #
 
-from get_scale_csi import get_scale_csi
-from sklearn.decomposition import PCA
+from CSI.gesture_recognition.get_scale_csi import get_scale_csi
 import matplotlib.pyplot as plt
 import numpy as np
 

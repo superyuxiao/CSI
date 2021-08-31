@@ -16,11 +16,10 @@
 # ------------------------------ file details ------------------------------ #
 
 
-from get_scale_csi import get_scale_csi
+from CSI.gesture_recognition.get_scale_csi import get_scale_csi
 from scipy import signal
 import matplotlib.pyplot as plt
 import numpy as np
-import math
 
 # !读取样本
 gresture_O_location_1_6 = np.load('classroom_data_unit/DX/O/gresture_O_location_1_6.npy',allow_pickle=True)

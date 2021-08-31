@@ -23,29 +23,16 @@
 # ------------------------------ file details ------------------------------ #
 
 # 加载相关库
-import os
-import random
-import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import torch.optim as optim
-import torchvision
-import torchvision.transforms as transforms
-import numpy as np
-from PIL import Image
-import gzip
-import json
-from matplotlib.pyplot import subplot
 import numpy as np
 from sklearn.utils import shuffle
 from sklearn.decomposition import PCA
 import matplotlib.pyplot as plt
 from scipy import signal
-from scipy import stats
 import datetime
-import math
 import seaborn as sns
-from get_scale_csi import get_scale_csi
+from CSI.gesture_recognition.get_scale_csi import get_scale_csi
 
 
 def read_sample(filepath):
@@ -165,7 +152,8 @@ def data_processing(path, feature_number, label):
         # print(abs_dy_csi.shape)
         # 分段
         k = 2
-        split_index = [i for i in range(int(abs_dy_csi.shape[0] / k), abs_dy_csi.shape[0], int(abs_dy_csi.shape[0] / k))]
+        split_index = [i for i in
+                       range(int(abs_dy_csi.shape[0] / k), abs_dy_csi.shape[0], int(abs_dy_csi.shape[0] / k))]
         segment_dy_csi = np.split(abs_dy_csi, split_index, axis=0)
         if np.shape(segment_dy_csi[0]) != np.shape(segment_dy_csi[-1]):
             segment_dy_csi = segment_dy_csi[:-1]  # 去除最后一个， 保证各片段等长度
@@ -183,7 +171,7 @@ def data_processing(path, feature_number, label):
         # 缩小尺寸
         Den = np.matmul(cross_segment, np.transpose(cross_segment))
         # hotmap
-        if(i == 42):
+        if (i == 42):
             sns.heatmap(Den / 10000000000, cmap='Reds')
             plt.title(path)
             plt.show()
@@ -273,6 +261,7 @@ def load_data(filepath=None):
     # train_feature, test_feature, train_label, test_label = train_test_split(feature, label, random_state=1,
     #                                                                         test_size=0.3)
     return train_feature, test_feature, train_label, test_label
+
 
 def load_dataset(mode='train', train_feature=None, test_feature=None, train_label=None, test_label=None, BATCHSIZE=15):
     # 根据输入mode参数决定使用训练集，验证集还是测试
@@ -368,7 +357,8 @@ if __name__ == '__main__':
     feature_number = 90 * 90
     # ! DX
     # 手势O，位置1
-    path = filepath + 'LZW/O/gresture_O_location_1_'
+    gesture_path = 'LZW/O/gresture_O_location_1_'
+    path = filepath + gesture_path
     # csi_DX_O_1 = data_processing(filepath_O_1, feature_number, 0)
 
     for i in range(31, 32):
@@ -379,11 +369,44 @@ if __name__ == '__main__':
         # 取0-0天线对
         raw_csi = scale_csi[:, :, 0, 0:3]
         print(raw_csi.shape)
-        fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(9, 15))
-        sns.heatmap(np.transpose(abs(raw_csi[:, :, 0])), cmap='Reds', ax=ax1)
-        sns.heatmap(np.transpose(abs(raw_csi[:, :, 1])), cmap='Reds', ax=ax2)
+        fig, axs = plt.subplots(31, 2, figsize=(18, 93))
         # csi ratio, 存在分母为0的情况，经过arctan后可以从无穷变为pi/2
         ratio_csi = np.arctan(raw_csi[:, :, 0] / raw_csi[:, :, 1])
-        sns.heatmap(np.transpose(abs(ratio_csi)), cmap='Reds', ax=ax3)
-        # ax3.plot(np.arctan(abs(ratio_csi)))
+        # 幅度热力图
+        sns.heatmap(np.transpose(abs(ratio_csi)), vmin=0, vmax=3.2, cmap='YlGn', ax=axs[0, 0])
+        # 相位热力图
+        sns.heatmap(np.transpose(np.unwrap(np.angle(ratio_csi))), cmap='YlGn', ax=axs[0, 1])
+        # 每个子载波的幅度图、相位图
+        for k in range(30):
+            axs[k + 1, 0].plot(abs(ratio_csi[:, k]))
+            axs[k + 1, 0].set_ylim([0, 3.2])
+            axs[k + 1, 1].plot((np.unwrap(np.angle(ratio_csi[:, k]))))
+        # # SG滤波器滤波
+        # for k in range(30):
+        #     ratio_csi[:, k].real = savgol_filter(ratio_csi[:, k].real, 9, 3)
+        #     ratio_csi[:, k].imag = savgol_filter(ratio_csi[:, k].imag, 9, 3)
+        # # 滤波后的幅度热力图
+        # sns.heatmap(np.transpose(abs(ratio_csi)), vmin=0, vmax=3.2, cmap='YlGn', ax=axs[1, 0])
+        # # 滤波后的相位热力图
+        # sns.heatmap(np.transpose(np.unwrap(np.angle(ratio_csi))), cmap='YlGn', ax=axs[1, 1])
+        # # 滤波后每个子载波的幅度图、相位图
+        # for k in range(30):
+        #     axs[k + 2, 0].plot(abs(ratio_csi[:, k]))
+        #     axs[k + 2, 0].set_ylim([0, 3.2])
+        #     axs[k + 2, 1].plot((np.unwrap(np.angle(ratio_csi[:, k]))))
+        # plt.figure(figsize=(12, 9))
+        # start = 50
+        # end = 650
+        # c = np.arange(start, end)
+        # plt.scatter(ratio_csi[start:end, 12].real, ratio_csi[start:end, 12].imag, c=c, cmap='coolwarm')
+        # plt.axis([-1.6, 1.6, -1.6, 1.6])
+        # plt.colorbar()
+        # plt.title(str(start)+'-'+str(end))
+        # plt.figure(figsize=(15, 5))
+        # pca_ratio_csi = PCA_1(np.unwrap(np.angle(ratio_csi)), 5, False)
+        # # plt.plot(np.unwrap(np.angle(ratio_csi[:, 12])))
+        # plt.plot(pca_ratio_csi)
+        fig.suptitle(gesture_path + str(i))
         plt.show()
+
+

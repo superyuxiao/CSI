@@ -1,10 +1,7 @@
 #from tokenize import Bracket
-from matplotlib.pyplot import plot
 import numpy as np
-from numpy import random
 from Bfee import Bfee
-from get_scale_csi import get_scale_csi
-from sklearn import model_selection
+from CSI.gesture_recognition.get_scale_csi import get_scale_csi
 import matplotlib.pyplot as plt
 import datetime
 

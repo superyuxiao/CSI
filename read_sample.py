@@ -15,12 +15,8 @@
 # 读取分割后的数据样本，绘出未处理的幅度图或相位图。
 # ------------------------------ file details ------------------------------ #
 
-from matplotlib.pyplot import plot
 import numpy as np
-from numpy import random
-from Bfee import Bfee
-from get_scale_csi import get_scale_csi
-from sklearn import model_selection
+from CSI.gesture_recognition.get_scale_csi import get_scale_csi
 import matplotlib.pyplot as plt
 
 # !读取样本
